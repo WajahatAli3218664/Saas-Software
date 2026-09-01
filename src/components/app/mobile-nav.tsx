@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
 import { Menu, Stethoscope } from "lucide-react";
 import {
   Sheet,
@@ -21,12 +20,18 @@ export function MobileNav({
   items: NavItem[];
   clinicName: string;
 }) {
-  const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const [state, setState] = useState({ open: false, pathname });
 
-  // Navigating inside the sheet should dismiss it, not leave it covering the
-  // page it just moved to.
-  useEffect(() => setOpen(false), [pathname]);
+  // Navigating inside the sheet should dismiss it rather than leave it
+  // covering the page it just moved to. Resetting during render on a changed
+  // pathname avoids an effect that would flash the sheet open for a frame.
+  if (state.pathname !== pathname) {
+    setState({ open: false, pathname });
+  }
+
+  const open = state.open;
+  const setOpen = (next: boolean) => setState({ open: next, pathname });
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

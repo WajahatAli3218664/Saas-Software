@@ -215,7 +215,7 @@ export default async function LandingPage() {
           <Reveal>
             <div className="border-primary/20 from-primary/8 flex flex-col items-center gap-5 rounded-2xl border bg-gradient-to-b to-transparent px-6 py-14 text-center">
               <h2 className="font-display max-w-xl text-3xl font-semibold tracking-tight text-balance">
-                Try it on tomorrow's appointments.
+                Try it on tomorrow&apos;s appointments.
               </h2>
               <p className="text-muted-foreground max-w-md">
                 Set up your clinic, add your price list, and bill a real patient

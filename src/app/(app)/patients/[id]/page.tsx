@@ -57,9 +57,13 @@ export default async function PatientPage({
       ),
   ]);
 
+  // Captured once for this request rather than read during render, which
+  // would make the component non-idempotent.
+  const renderedAt = new Date();
   const age = patient.dateOfBirth
     ? Math.floor(
-        (Date.now() - patient.dateOfBirth.getTime()) / 31_557_600_000,
+        (renderedAt.getTime() - patient.dateOfBirth.getTime()) /
+          31_557_600_000,
       )
     : null;
 

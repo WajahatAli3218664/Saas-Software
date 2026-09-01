@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, gte, lte, desc, sql, count, sum, ne } from "drizzle-orm";
+import { and, eq, gte, lte, desc, sql, count, ne } from "drizzle-orm";
 import { db } from "@/db";
 import {
   invoices,
@@ -7,8 +7,6 @@ import {
   patients,
   services,
   serviceCategories,
-  appointments,
-  payments,
   members,
 } from "@/db/schema";
 

@@ -269,7 +269,7 @@ export function InvoiceBuilder({
                 const computed = totals.lines[index];
                 const overCap =
                   line.discountType && line.discountValue > 0
-                    ? discountAsPercent(line, factor) >
+                    ? discountAsPercent(line) >
                       Math.min(line.maxDiscountPercent, maxDiscount)
                     : false;
 
@@ -582,7 +582,7 @@ function discountInMinor(
   return type === "fixed" ? Math.round(numeric * factor) : numeric;
 }
 
-function discountAsPercent(line: Line, _factor: number): number {
+function discountAsPercent(line: Line): number {
   const gross = line.unitPrice * line.quantity;
   if (line.discountType === "percent") return line.discountValue;
   return gross > 0 ? (line.discountValue / gross) * 100 : 0;

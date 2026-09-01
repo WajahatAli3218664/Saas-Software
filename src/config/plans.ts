@@ -14,7 +14,7 @@ export interface PlanLimits {
 }
 
 export interface PlanDefinition {
-  tier: PlanTier;
+  tier: Exclude<PlanTier, "trial">;
   name: string;
   tagline: string;
   features: string[];
