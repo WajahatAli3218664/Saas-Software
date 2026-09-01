@@ -26,51 +26,12 @@ export const PERMISSIONS = [
 export type Permission = (typeof PERMISSIONS)[number];
 
 /**
- * Role baselines. A grant flag on the member record can only ADD to these,
- * never take away — see resolvePermissions.
- */
-const ROLE_PERMISSIONS: Record<MemberRole, readonly Permission[]> = {
-  owner: PERMISSIONS,
-  admin: [
-    "clinic:manage",
-    "staff:manage",
-    "service:create",
-    "service:edit_price",
-    "service:delete",
-    "patient:create",
-    "patient:edit",
-    "patient:delete",
-    "appointment:manage",
-    "invoice:create",
-    "invoice:discount",
-    "invoice:void",
-    "payment:record",
-    "report:view",
-    "settings:print",
-  ],
-  manager: [
-    "service:create",
-    "service:edit_price",
-    "patient:create",
-    "patient:edit",
-    "appointment:manage",
-    "invoice:create",
-    "invoice:discount",
-    "payment:record",
-    "report:view",
-  ],
-  staff: [
-    "patient:create",
-    "patient:edit",
-    "appointment:manage",
-    "invoice:create",
-    "payment:record",
-  ],
-};
-
-/**
- * Per-member grant flags that widen the role baseline. These are the toggles
- * the admin sees when giving a user access.
+ * Permissions controlled by a grant flag on the member record. These are
+ * never part of a role's fixed baseline below — including the owner's —
+ * because a flag that a hardcoded baseline overrides is not really a
+ * switch. An owner is provisioned with every one of these flags on (see
+ * provisionClinic), so a fresh owner still has full access; turning one off
+ * is meant to actually take it away, including from themselves.
  */
 const GRANT_PERMISSIONS: Array<{
   flag: keyof Member;
@@ -83,6 +44,58 @@ const GRANT_PERMISSIONS: Array<{
   { flag: "canViewReports", grants: ["report:view"] },
   { flag: "canManageStaff", grants: ["staff:manage"] },
 ];
+
+const GRANT_CONTROLLED: ReadonlySet<Permission> = new Set(
+  GRANT_PERMISSIONS.flatMap((g) => g.grants),
+);
+
+/**
+ * Fixed role baselines, excluding anything a grant flag controls (see
+ * GRANT_PERMISSIONS) — those are resolved separately in resolvePermissions
+ * regardless of role, so a flag actually governs the permission it names.
+ */
+const ROLE_PERMISSIONS: Record<MemberRole, readonly Permission[]> = {
+  owner: PERMISSIONS.filter((p) => !GRANT_CONTROLLED.has(p)),
+  admin: (
+    [
+      "clinic:manage",
+      "staff:manage",
+      "service:create",
+      "service:edit_price",
+      "service:delete",
+      "patient:create",
+      "patient:edit",
+      "patient:delete",
+      "appointment:manage",
+      "invoice:create",
+      "invoice:discount",
+      "invoice:void",
+      "payment:record",
+      "report:view",
+      "settings:print",
+    ] as const
+  ).filter((p) => !GRANT_CONTROLLED.has(p)),
+  manager: (
+    [
+      "service:create",
+      "service:edit_price",
+      "patient:create",
+      "patient:edit",
+      "appointment:manage",
+      "invoice:create",
+      "invoice:discount",
+      "payment:record",
+      "report:view",
+    ] as const
+  ).filter((p) => !GRANT_CONTROLLED.has(p)),
+  staff: [
+    "patient:create",
+    "patient:edit",
+    "appointment:manage",
+    "invoice:create",
+    "payment:record",
+  ],
+};
 
 export function resolvePermissions(member: Member): Set<Permission> {
   const resolved = new Set<Permission>(ROLE_PERMISSIONS[member.role]);

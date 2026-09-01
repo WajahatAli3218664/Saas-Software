@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, Stethoscope } from "lucide-react";
+import { Menu } from "lucide-react";
+import { OrganizationSwitcher } from "@clerk/nextjs";
 import {
   Sheet,
   SheetContent,
@@ -13,13 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { SidebarNav, type NavItem } from "./sidebar";
 
-export function MobileNav({
-  items,
-  clinicName,
-}: {
-  items: NavItem[];
-  clinicName: string;
-}) {
+export function MobileNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   const [state, setState] = useState({ open: false, pathname });
 
@@ -46,13 +41,21 @@ export function MobileNav({
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-64 p-0">
-        <SheetHeader className="h-14 flex-row items-center gap-2 space-y-0 border-b px-4">
-          <span className="bg-primary/10 text-primary grid size-7 place-items-center rounded-md">
-            <Stethoscope className="size-4" aria-hidden />
-          </span>
-          <SheetTitle className="font-display truncate text-base">
-            {clinicName}
-          </SheetTitle>
+        <SheetHeader className="h-14 flex-row items-center gap-2 space-y-0 border-b px-3">
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <OrganizationSwitcher
+            hidePersonal
+            afterSelectOrganizationUrl="/dashboard"
+            afterCreateOrganizationUrl="/dashboard"
+            appearance={{
+              elements: {
+                rootBox: "w-full",
+                organizationSwitcherTrigger: "w-full justify-start px-1",
+                organizationPreviewMainIdentifier:
+                  "font-display font-semibold",
+              },
+            }}
+          />
         </SheetHeader>
         <div className="px-3 py-2">
           <SidebarNav items={items} />

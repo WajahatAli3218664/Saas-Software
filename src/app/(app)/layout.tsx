@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
-import { Stethoscope } from "lucide-react";
+import { UserButton, OrganizationSwitcher } from "@clerk/nextjs";
 import { ensureClinicForSession } from "@/lib/ensure-clinic";
 import { can } from "@/lib/permissions";
 import { SidebarNav, type NavItem } from "@/components/app/sidebar";
@@ -44,13 +43,23 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
       <div className="flex flex-1">
         <aside className="bg-sidebar no-print hidden w-60 shrink-0 flex-col border-r lg:flex">
-          <div className="flex h-14 items-center gap-2 px-4">
-            <span className="bg-primary/10 text-primary grid size-7 place-items-center rounded-md">
-              <Stethoscope className="size-4" aria-hidden />
-            </span>
-            <span className="font-display truncate text-base font-semibold">
-              {clinic.name}
-            </span>
+          <div className="flex h-14 items-center px-3">
+            {/* Clicking this is how a signed-in owner moves between the
+                clinics they belong to — the account menu alone never shows
+                that list, only "Manage account" and "Sign out". */}
+            <OrganizationSwitcher
+              hidePersonal
+              afterSelectOrganizationUrl="/dashboard"
+              afterCreateOrganizationUrl="/dashboard"
+              appearance={{
+                elements: {
+                  rootBox: "w-full",
+                  organizationSwitcherTrigger:
+                    "w-full justify-start rounded-md px-2 py-1.5 hover:bg-sidebar-accent",
+                  organizationPreviewMainIdentifier: "font-display font-semibold",
+                },
+              }}
+            />
           </div>
           <div className="flex-1 px-3 py-2">
             <SidebarNav items={items} />
@@ -62,7 +71,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="no-print bg-background/80 sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4 backdrop-blur sm:px-6">
-            <MobileNav items={items} clinicName={clinic.name} />
+            <MobileNav items={items} />
             <Link
               href="/dashboard"
               className="font-display truncate font-semibold lg:hidden"
