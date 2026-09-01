@@ -26,6 +26,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     { href: "/services", label: "Services", icon: "services" },
   ];
 
+  if (can(member, "report:view")) {
+    items.push({ href: "/reports", label: "Reports", icon: "reports" });
+  }
+
   if (can(member, "clinic:manage") || can(member, "staff:manage")) {
     items.push({ href: "/settings", label: "Settings", icon: "settings" });
   }

@@ -9,6 +9,7 @@ import {
   Users,
   Receipt,
   CalendarDays,
+  ChartLine,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const ICONS = {
   patients: Users,
   billing: Receipt,
   appointments: CalendarDays,
+  reports: ChartLine,
   settings: Settings,
 } satisfies Record<string, LucideIcon>;
 
