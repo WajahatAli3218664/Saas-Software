@@ -41,6 +41,20 @@ export function Aurora() {
       { x: 0.52, y: 0.62, r: 0.3, hue: 165, drift: 0.00013, phase: 4.2 },
     ];
 
+    // A fourth light the cursor itself carries — the only one of the four
+    // that answers the viewer rather than drifting on its own clock. Starts
+    // at the hero's natural focal point so there is no jump before the first
+    // pointermove.
+    const cursor = { x: 0.5, y: 0.38, targetX: 0.5, targetY: 0.38 };
+
+    function onPointerMove(event: PointerEvent) {
+      const rect = canvas!.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      cursor.targetX = (event.clientX - rect.left) / rect.width;
+      cursor.targetY = (event.clientY - rect.top) / rect.height;
+    }
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+
     let frame = 0;
     let running = true;
 
@@ -50,6 +64,11 @@ export function Aurora() {
       const dark = isDark();
       context.clearRect(0, 0, W, H);
       context.globalCompositeOperation = "lighter";
+
+      // Eased toward the pointer rather than snapped to it — a light that
+      // teleports reads as a cursor; one that trails reads as atmosphere.
+      cursor.x += (cursor.targetX - cursor.x) * 0.06;
+      cursor.y += (cursor.targetY - cursor.y) * 0.06;
 
       for (const blob of blobs) {
         const t = reduced ? 0 : time * blob.drift + blob.phase;
@@ -82,6 +101,26 @@ export function Aurora() {
         context.fillRect(0, 0, W, H);
       }
 
+      // The cursor light — smaller, brighter, warmer than the ambient blobs
+      // so it reads as a highlight rather than a fourth identical bloom.
+      const cx = cursor.x * W;
+      const cy = cursor.y * H;
+      const cursorGradient = context.createRadialGradient(
+        cx,
+        cy,
+        0,
+        cx,
+        cy,
+        W * 0.22,
+      );
+      const cursorInner = dark
+        ? "hsla(174, 85%, 60%, 0.22)"
+        : "hsla(174, 75%, 52%, 0.12)";
+      cursorGradient.addColorStop(0, cursorInner);
+      cursorGradient.addColorStop(1, "hsla(0, 0%, 0%, 0)");
+      context.fillStyle = cursorGradient;
+      context.fillRect(0, 0, W, H);
+
       context.globalCompositeOperation = "source-over";
 
       // A still frame is enough when motion is not wanted; the paint still
@@ -104,6 +143,7 @@ export function Aurora() {
       running = false;
       cancelAnimationFrame(frame);
       observer.disconnect();
+      window.removeEventListener("pointermove", onPointerMove);
     };
   }, []);
 

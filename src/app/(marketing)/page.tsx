@@ -1,6 +1,4 @@
-import Link from "next/link";
 import {
-  ArrowRight,
   Receipt,
   Printer,
   ShieldCheck,
@@ -11,13 +9,13 @@ import {
   UserCog,
   Globe,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Reveal } from "@/components/marketing/reveal";
+import { Reveal, RevealPop } from "@/components/marketing/reveal";
 import { PricingTable } from "@/components/marketing/pricing-table";
 import { Aurora } from "@/components/marketing/aurora";
 import { TiltCard } from "@/components/marketing/tilt-card";
 import { CountUp } from "@/components/marketing/count-up";
-import { InvoicePreview } from "@/components/marketing/invoice-preview";
+import { HeroContent } from "@/components/marketing/hero-content";
+import { ClosingCta } from "@/components/marketing/closing-cta";
 import { getPriceRegion } from "@/lib/geo";
 
 const FEATURES = [
@@ -85,55 +83,7 @@ export default async function LandingPage() {
         <Aurora />
 
         <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
-          <div className="flex max-w-2xl flex-col gap-6">
-            <Reveal>
-              <span className="border-primary/25 bg-primary/8 text-primary inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-sm">
-                <span className="bg-primary size-1.5 animate-pulse rounded-full" />
-                Built for aesthetic clinics
-              </span>
-            </Reveal>
-
-            <Reveal delay={0.05}>
-              <h1 className="font-display text-4xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-                Run the whole clinic from the front desk.
-              </h1>
-            </Reveal>
-
-            <Reveal delay={0.1}>
-              <p className="text-muted-foreground max-w-xl text-lg">
-                Appointments, treatment records, invoicing and printing — in one
-                place, on any device, for a monthly fee instead of a lump sum.
-              </p>
-            </Reveal>
-
-            <Reveal delay={0.15}>
-              <div className="flex flex-wrap items-center gap-3">
-                <Button asChild size="lg" className="group">
-                  <Link href="/sign-up">
-                    Start your 14-day trial
-                    <ArrowRight
-                      className="size-4 transition-transform duration-300 group-hover:translate-x-0.5"
-                      aria-hidden
-                    />
-                  </Link>
-                </Button>
-                <Button asChild variant="ghost" size="lg">
-                  <Link href="/pricing">See pricing</Link>
-                </Button>
-              </div>
-            </Reveal>
-
-            <Reveal delay={0.2}>
-              <p className="text-muted-foreground text-sm">
-                No card to start. Set up your clinic in about two minutes.
-              </p>
-            </Reveal>
-          </div>
-
-          {/* Product glimpse — a real invoice, filling in row by row. */}
-          <Reveal delay={0.25} className="mt-14">
-            <InvoicePreview />
-          </Reveal>
+          <HeroContent />
         </div>
       </section>
 
@@ -185,7 +135,7 @@ export default async function LandingPage() {
 
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             {PLATFORM.map((item, i) => (
-              <Reveal key={item.title} delay={i * 0.06}>
+              <RevealPop key={item.title} delay={i * 0.1}>
                 <TiltCard className="h-full">
                   <div className="bg-card flex h-full flex-col gap-2.5 rounded-xl border p-5 transition-shadow duration-300 group-hover:shadow-lg">
                     <span className="bg-primary/10 text-primary grid size-9 place-items-center rounded-lg transition-transform duration-300 group-hover:scale-110">
@@ -197,7 +147,7 @@ export default async function LandingPage() {
                     </p>
                   </div>
                 </TiltCard>
-              </Reveal>
+              </RevealPop>
             ))}
           </div>
         </div>
@@ -252,31 +202,7 @@ export default async function LandingPage() {
       {/* Close */}
       <section className="relative overflow-hidden">
         <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
-          <Reveal>
-            <div className="border-primary/20 from-primary/10 relative flex flex-col items-center gap-5 overflow-hidden rounded-2xl border bg-gradient-to-b to-transparent px-6 py-14 text-center">
-              <div
-                aria-hidden
-                className="bg-primary/12 absolute -top-24 left-1/2 size-64 -translate-x-1/2 animate-pulse rounded-full blur-3xl"
-                style={{ animationDuration: "6s" }}
-              />
-              <h2 className="font-display relative max-w-xl text-3xl font-semibold tracking-tight text-balance">
-                Try it on tomorrow&apos;s appointments.
-              </h2>
-              <p className="text-muted-foreground relative max-w-md">
-                Set up your clinic, add your price list, and bill a real patient
-                — all before the trial asks you for anything.
-              </p>
-              <Button asChild size="lg" className="group relative">
-                <Link href="/sign-up">
-                  Start free
-                  <ArrowRight
-                    className="size-4 transition-transform duration-300 group-hover:translate-x-0.5"
-                    aria-hidden
-                  />
-                </Link>
-              </Button>
-            </div>
-          </Reveal>
+          <ClosingCta />
         </div>
       </section>
     </>

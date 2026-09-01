@@ -77,22 +77,41 @@ export function PricingTable({ region }: { region: PriceRegion }) {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {PLAN_LIST.map((plan) => {
+        {PLAN_LIST.map((plan, i) => {
           const total = plan.price[region][interval];
           const saving = savingsPercent(plan, region, interval);
 
           return (
-            <div
+            <motion.div
               key={plan.tier}
+              initial={reduced ? undefined : { opacity: 0, y: 20 }}
+              whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.5, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={
+                reduced
+                  ? undefined
+                  : { y: -4, transition: { duration: 0.2 } }
+              }
               className={cn(
                 "bg-card relative flex flex-col gap-5 rounded-xl border p-6",
                 plan.highlighted && "border-primary shadow-sm",
               )}
             >
               {plan.highlighted && (
-                <span className="bg-primary text-primary-foreground absolute -top-2.5 left-6 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                <motion.span
+                  initial={reduced ? undefined : { opacity: 0, scale: 0.7, y: -6 }}
+                  whileInView={reduced ? undefined : { opacity: 1, scale: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{
+                    delay: i * 0.08 + 0.35,
+                    duration: 0.4,
+                    ease: [0.34, 1.56, 0.64, 1],
+                  }}
+                  className="bg-primary text-primary-foreground absolute -top-2.5 left-6 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                >
                   Most clinics choose this
-                </span>
+                </motion.span>
               )}
 
               <div className="flex flex-col gap-1">
@@ -143,7 +162,7 @@ export function PricingTable({ region }: { region: PriceRegion }) {
               >
                 <Link href="/sign-up">Start free trial</Link>
               </Button>
-            </div>
+            </motion.div>
           );
         })}
       </div>
