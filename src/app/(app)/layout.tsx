@@ -20,6 +20,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   const items: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
+    { href: "/appointments", label: "Appointments", icon: "appointments" },
     { href: "/patients", label: "Patients", icon: "patients" },
     { href: "/billing", label: "Billing", icon: "billing" },
     { href: "/services", label: "Services", icon: "services" },
