@@ -7,10 +7,14 @@ import {
   Users,
   Sparkles,
   CalendarDays,
+  Building2,
+  UserCog,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/marketing/reveal";
 import { PricingTable } from "@/components/marketing/pricing-table";
+import { Aurora } from "@/components/marketing/aurora";
 import { getPriceRegion } from "@/lib/geo";
 
 const FEATURES = [
@@ -46,6 +50,28 @@ const FEATURES = [
   },
 ];
 
+/**
+ * The three properties that make this a platform rather than an installation.
+ * They are the reason a clinic can sign up unaided, so they lead the page.
+ */
+const PLATFORM = [
+  {
+    icon: Building2,
+    title: "Every clinic gets its own",
+    body: "Your patients, your price list, your invoice numbers — sealed off from every other clinic on the platform. Nobody else can see a row of it.",
+  },
+  {
+    icon: UserCog,
+    title: "As many staff as you need",
+    body: "Add the doctor, the receptionist, the therapist. Each gets their own login, and you decide what each one may do.",
+  },
+  {
+    icon: Globe,
+    title: "Nothing to install, nowhere to visit",
+    body: "Sign up, name your clinic, upload your logo. You are billing patients two minutes later, from any computer or phone.",
+  },
+];
+
 export default async function LandingPage() {
   const region = await getPriceRegion();
 
@@ -53,14 +79,12 @@ export default async function LandingPage() {
     <>
       {/* Hero */}
       <section className="relative overflow-hidden border-b">
-        <div
-          aria-hidden
-          className="from-primary/8 pointer-events-none absolute inset-0 bg-gradient-to-b via-transparent to-transparent"
-        />
+        <Aurora />
+
         <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
           <div className="flex max-w-2xl flex-col gap-6">
             <Reveal>
-              <span className="border-primary/25 bg-primary/8 text-primary inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
+              <span className="border-primary/25 bg-primary/8 text-primary inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-sm">
                 Built for aesthetic clinics
               </span>
             </Reveal>
@@ -101,7 +125,7 @@ export default async function LandingPage() {
 
           {/* Product glimpse — a real invoice line, not a stock screenshot. */}
           <Reveal delay={0.25} className="mt-14">
-            <div className="bg-card overflow-hidden rounded-xl border shadow-sm">
+            <div className="bg-card/90 overflow-hidden rounded-xl border shadow-lg backdrop-blur-sm">
               <div className="bg-muted/40 flex items-center gap-2 border-b px-4 py-2.5">
                 <span className="bg-destructive/40 size-2.5 rounded-full" />
                 <span className="bg-warning/40 size-2.5 rounded-full" />
@@ -163,6 +187,43 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* What makes it a platform */}
+      <section className="border-b">
+        <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
+          <Reveal>
+            <div className="flex max-w-xl flex-col gap-3">
+              <span className="text-primary font-mono text-xs tracking-widest uppercase">
+                One platform, every clinic
+              </span>
+              <h2 className="font-display text-3xl font-semibold tracking-tight text-balance">
+                Software you subscribe to, not software someone installs.
+              </h2>
+              <p className="text-muted-foreground">
+                Nobody visits your clinic to set it up, and nothing sits on one
+                computer in the back office. You sign up the way you would for
+                any other online service.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {PLATFORM.map((item, i) => (
+              <Reveal key={item.title} delay={i * 0.06}>
+                <div className="bg-card flex h-full flex-col gap-2.5 rounded-xl border p-5">
+                  <span className="bg-primary/10 text-primary grid size-9 place-items-center rounded-lg">
+                    <item.icon className="size-4.5" aria-hidden />
+                  </span>
+                  <h3 className="font-medium">{item.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {item.body}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section id="features" className="border-b">
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
@@ -210,18 +271,22 @@ export default async function LandingPage() {
       </section>
 
       {/* Close */}
-      <section>
-        <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
+      <section className="relative overflow-hidden">
+        <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
           <Reveal>
-            <div className="border-primary/20 from-primary/8 flex flex-col items-center gap-5 rounded-2xl border bg-gradient-to-b to-transparent px-6 py-14 text-center">
-              <h2 className="font-display max-w-xl text-3xl font-semibold tracking-tight text-balance">
+            <div className="border-primary/20 from-primary/10 relative flex flex-col items-center gap-5 overflow-hidden rounded-2xl border bg-gradient-to-b to-transparent px-6 py-14 text-center">
+              <div
+                aria-hidden
+                className="bg-primary/12 absolute -top-24 left-1/2 size-64 -translate-x-1/2 rounded-full blur-3xl"
+              />
+              <h2 className="font-display relative max-w-xl text-3xl font-semibold tracking-tight text-balance">
                 Try it on tomorrow&apos;s appointments.
               </h2>
-              <p className="text-muted-foreground max-w-md">
+              <p className="text-muted-foreground relative max-w-md">
                 Set up your clinic, add your price list, and bill a real patient
                 — all before the trial asks you for anything.
               </p>
-              <Button asChild size="lg">
+              <Button asChild size="lg" className="relative">
                 <Link href="/sign-up">
                   Start free
                   <ArrowRight className="size-4" aria-hidden />
