@@ -3,6 +3,10 @@ import { can } from "@/lib/permissions";
 import { getStaff } from "@/lib/queries";
 import { StaffRow } from "./staff-row";
 
+// Every render here depends on the signed-in tenant and must never
+// be cached or shared across requests.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Staff & access" };
 
 export default async function StaffSettingsPage() {

@@ -13,6 +13,10 @@ import { StatTile, Sparkline } from "@/components/app/stat-tile";
 import { InvoiceStatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 
+// Every render here depends on the signed-in tenant and must never
+// be cached or shared across requests.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {

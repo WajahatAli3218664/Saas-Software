@@ -11,6 +11,10 @@ import { InvoiceStatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 import { PatientDialog } from "../patient-dialog";
 
+// Every render here depends on the signed-in tenant and must never
+// be cached or shared across requests.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Patient" };
 
 export default async function PatientPage({

@@ -187,7 +187,12 @@ export async function updateMemberGrants(
       },
     });
 
+    // Discount ceilings and grant flags are read by every billing screen,
+    // not just the staff list, so widen the revalidation beyond /settings.
     revalidatePath("/settings/staff");
+    revalidatePath("/billing");
+    revalidatePath("/billing/new");
+    revalidatePath("/services");
     return { ok: true };
   } catch (error) {
     return toResult(error);

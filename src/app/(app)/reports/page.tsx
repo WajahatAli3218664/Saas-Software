@@ -8,6 +8,10 @@ import { formatMoney, formatMoneyCompact } from "@/lib/money";
 import { StatTile, Sparkline } from "@/components/app/stat-tile";
 import { RangePicker } from "./range-picker";
 
+// Every render here depends on the signed-in tenant and must never
+// be cached or shared across requests.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Reports" };
 
 const RANGES = { "7": 7, "30": 30, "90": 90 } as const;

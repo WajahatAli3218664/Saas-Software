@@ -6,6 +6,10 @@ import { getPatients } from "@/lib/queries";
 import { PatientDialog } from "./patient-dialog";
 import { PatientSearch } from "./patient-search";
 
+// Every render here depends on the signed-in tenant and must never
+// be cached or shared across requests.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Patients" };
 
 export default async function PatientsPage({

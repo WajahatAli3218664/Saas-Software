@@ -6,6 +6,10 @@ import { formatMoney } from "@/lib/money";
 import { ServiceDialog } from "./service-dialog";
 import { ServiceToggle } from "./service-toggle";
 
+// Every render here depends on the signed-in tenant and must never
+// be cached or shared across requests.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Services" };
 
 /** The symbol alone, for use as a field prefix where the code is redundant. */

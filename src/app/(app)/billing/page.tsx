@@ -8,6 +8,10 @@ import { formatMoney } from "@/lib/money";
 import { InvoiceStatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 
+// Every render here depends on the signed-in tenant and must never
+// be cached or shared across requests.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Billing" };
 
 export default async function BillingPage() {

@@ -17,6 +17,10 @@ import { InvoiceStatusBadge } from "@/components/app/status-badge";
 import { InvoiceSheet } from "./invoice-sheet";
 import { InvoiceActions } from "./invoice-actions";
 
+// Every render here depends on the signed-in tenant and must never
+// be cached or shared across requests.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Invoice" };
 
 export default async function InvoicePage({ params }: PageProps<"/billing/[id]">) {

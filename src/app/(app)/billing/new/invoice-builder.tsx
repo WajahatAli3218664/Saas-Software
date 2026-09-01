@@ -165,6 +165,21 @@ export function InvoiceBuilder({
       return;
     }
 
+    // Mirrors the server's own check, so a discount past the cap never
+    // reaches the network call — the badge already flagged the offending
+    // line, this just stops the click from doing anything.
+    const blocked = lines.find((line) => {
+      if (!line.discountType || line.discountValue <= 0) return false;
+      const percent = discountAsPercent(line);
+      return percent > Math.min(line.maxDiscountPercent, maxDiscount);
+    });
+    if (blocked) {
+      toast.error(
+        `${blocked.name}'s discount is too large — fix it before continuing.`,
+      );
+      return;
+    }
+
     startTransition(async () => {
       const result = await createInvoice({
         patientId: patientId === "walk-in" ? null : patientId,

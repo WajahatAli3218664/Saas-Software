@@ -4,6 +4,10 @@ import { regionForCountry } from "@/config/plans";
 import { isStripeConfigured } from "@/lib/stripe";
 import { PlanPicker } from "./plan-picker";
 
+// Every render here depends on the signed-in tenant and must never
+// be cached or shared across requests.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Plan & billing" };
 
 const STATUS_COPY: Record<string, string> = {

@@ -9,6 +9,10 @@ import { TrialBanner } from "@/components/app/trial-banner";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { MobileNav } from "@/components/app/mobile-nav";
 
+// Every render here depends on the signed-in tenant and must never
+// be cached or shared across requests.
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   // Middleware has already sent anyone without an org to onboarding. Reaching
   // here with an org but no clinic means the provisioning webhook has not

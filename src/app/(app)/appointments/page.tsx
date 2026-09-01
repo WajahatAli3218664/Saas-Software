@@ -16,6 +16,10 @@ import { AppointmentStatusMenu } from "./status-menu";
 import { NewAppointmentDialog } from "./new-appointment-dialog";
 import { Button } from "@/components/ui/button";
 
+// Every render here depends on the signed-in tenant and must never
+// be cached or shared across requests.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Appointments" };
 
 /** yyyy-mm-dd for a date, shifted by n days, in the clinic's timezone. */

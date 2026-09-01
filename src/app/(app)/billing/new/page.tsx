@@ -7,6 +7,10 @@ import { requireTenantSession } from "@/lib/auth";
 import { can, maxDiscountFor } from "@/lib/permissions";
 import { InvoiceBuilder } from "./invoice-builder";
 
+// Every render here depends on the signed-in tenant and must never
+// be cached or shared across requests.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "New invoice" };
 
 export default async function NewInvoicePage() {

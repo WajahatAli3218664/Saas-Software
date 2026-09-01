@@ -15,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/marketing/reveal";
 import { PricingTable } from "@/components/marketing/pricing-table";
 import { Aurora } from "@/components/marketing/aurora";
+import { TiltCard } from "@/components/marketing/tilt-card";
+import { CountUp } from "@/components/marketing/count-up";
+import { InvoicePreview } from "@/components/marketing/invoice-preview";
 import { getPriceRegion } from "@/lib/geo";
 
 const FEATURES = [
@@ -85,6 +88,7 @@ export default async function LandingPage() {
           <div className="flex max-w-2xl flex-col gap-6">
             <Reveal>
               <span className="border-primary/25 bg-primary/8 text-primary inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-sm">
+                <span className="bg-primary size-1.5 animate-pulse rounded-full" />
                 Built for aesthetic clinics
               </span>
             </Reveal>
@@ -104,10 +108,13 @@ export default async function LandingPage() {
 
             <Reveal delay={0.15}>
               <div className="flex flex-wrap items-center gap-3">
-                <Button asChild size="lg">
+                <Button asChild size="lg" className="group">
                   <Link href="/sign-up">
                     Start your 14-day trial
-                    <ArrowRight className="size-4" aria-hidden />
+                    <ArrowRight
+                      className="size-4 transition-transform duration-300 group-hover:translate-x-0.5"
+                      aria-hidden
+                    />
                   </Link>
                 </Button>
                 <Button asChild variant="ghost" size="lg">
@@ -123,67 +130,37 @@ export default async function LandingPage() {
             </Reveal>
           </div>
 
-          {/* Product glimpse — a real invoice line, not a stock screenshot. */}
+          {/* Product glimpse — a real invoice, filling in row by row. */}
           <Reveal delay={0.25} className="mt-14">
-            <div className="bg-card/90 overflow-hidden rounded-xl border shadow-lg backdrop-blur-sm">
-              <div className="bg-muted/40 flex items-center gap-2 border-b px-4 py-2.5">
-                <span className="bg-destructive/40 size-2.5 rounded-full" />
-                <span className="bg-warning/40 size-2.5 rounded-full" />
-                <span className="bg-success/40 size-2.5 rounded-full" />
-                <span className="text-muted-foreground ml-2 font-mono text-xs">
-                  INV-000318 · Ayesha K. · P-0126
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-lg text-sm">
-                  <thead className="text-muted-foreground border-b text-xs uppercase">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-medium">
-                        Treatment
-                      </th>
-                      <th className="px-4 py-2 text-right font-medium">Qty</th>
-                      <th className="px-4 py-2 text-right font-medium">
-                        Price
-                      </th>
-                      <th className="px-4 py-2 text-right font-medium">
-                        Total
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="tabular-nums">
-                    <tr className="border-b">
-                      <td className="px-4 py-2.5">HydraFacial</td>
-                      <td className="px-4 py-2.5 text-right">1</td>
-                      <td className="px-4 py-2.5 text-right">12,000</td>
-                      <td className="px-4 py-2.5 text-right">12,000</td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="px-4 py-2.5">
-                        Botox — Forehead
-                        <span className="text-success ml-2 text-xs">
-                          10% off
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-right">1</td>
-                      <td className="px-4 py-2.5 text-right">25,000</td>
-                      <td className="px-4 py-2.5 text-right">22,500</td>
-                    </tr>
-                    <tr>
-                      <td
-                        className="text-muted-foreground px-4 py-2.5"
-                        colSpan={3}
-                      >
-                        Total due
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-semibold">
-                        34,500
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <InvoicePreview />
           </Reveal>
+        </div>
+      </section>
+
+      {/* Live numbers — real seeded clinics, not placeholder stats. */}
+      <section className="border-b">
+        <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6">
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+            {[
+              { value: 2, suffix: "", label: "clinics live on the platform" },
+              { value: 41, suffix: "", label: "invoices billed this month" },
+              { value: 23, suffix: "", label: "patients on record" },
+              { value: 16, suffix: "%", label: "average discount, capped per role" },
+            ].map((stat) => (
+              <Reveal key={stat.label} delay={0}>
+                <div className="flex flex-col gap-0.5">
+                  <CountUp
+                    value={stat.value}
+                    suffix={stat.suffix}
+                    className="font-display text-3xl font-semibold tabular-nums sm:text-4xl"
+                  />
+                  <span className="text-muted-foreground text-xs sm:text-sm">
+                    {stat.label}
+                  </span>
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -209,15 +186,17 @@ export default async function LandingPage() {
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             {PLATFORM.map((item, i) => (
               <Reveal key={item.title} delay={i * 0.06}>
-                <div className="bg-card flex h-full flex-col gap-2.5 rounded-xl border p-5">
-                  <span className="bg-primary/10 text-primary grid size-9 place-items-center rounded-lg">
-                    <item.icon className="size-4.5" aria-hidden />
-                  </span>
-                  <h3 className="font-medium">{item.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    {item.body}
-                  </p>
-                </div>
+                <TiltCard className="h-full">
+                  <div className="bg-card flex h-full flex-col gap-2.5 rounded-xl border p-5 transition-shadow duration-300 group-hover:shadow-lg">
+                    <span className="bg-primary/10 text-primary grid size-9 place-items-center rounded-lg transition-transform duration-300 group-hover:scale-110">
+                      <item.icon className="size-4.5" aria-hidden />
+                    </span>
+                    <h3 className="font-medium">{item.title}</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      {item.body}
+                    </p>
+                  </div>
+                </TiltCard>
               </Reveal>
             ))}
           </div>
@@ -236,8 +215,8 @@ export default async function LandingPage() {
           <div className="mt-10 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((feature, i) => (
               <Reveal key={feature.title} delay={i * 0.04}>
-                <div className="flex flex-col gap-2.5">
-                  <span className="bg-primary/10 text-primary grid size-9 place-items-center rounded-lg">
+                <div className="group flex flex-col gap-2.5">
+                  <span className="bg-primary/10 text-primary grid size-9 place-items-center rounded-lg transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
                     <feature.icon className="size-4.5" aria-hidden />
                   </span>
                   <h3 className="font-medium">{feature.title}</h3>
@@ -277,7 +256,8 @@ export default async function LandingPage() {
             <div className="border-primary/20 from-primary/10 relative flex flex-col items-center gap-5 overflow-hidden rounded-2xl border bg-gradient-to-b to-transparent px-6 py-14 text-center">
               <div
                 aria-hidden
-                className="bg-primary/12 absolute -top-24 left-1/2 size-64 -translate-x-1/2 rounded-full blur-3xl"
+                className="bg-primary/12 absolute -top-24 left-1/2 size-64 -translate-x-1/2 animate-pulse rounded-full blur-3xl"
+                style={{ animationDuration: "6s" }}
               />
               <h2 className="font-display relative max-w-xl text-3xl font-semibold tracking-tight text-balance">
                 Try it on tomorrow&apos;s appointments.
@@ -286,10 +266,13 @@ export default async function LandingPage() {
                 Set up your clinic, add your price list, and bill a real patient
                 — all before the trial asks you for anything.
               </p>
-              <Button asChild size="lg" className="relative">
+              <Button asChild size="lg" className="group relative">
                 <Link href="/sign-up">
                   Start free
-                  <ArrowRight className="size-4" aria-hidden />
+                  <ArrowRight
+                    className="size-4 transition-transform duration-300 group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
                 </Link>
               </Button>
             </div>
