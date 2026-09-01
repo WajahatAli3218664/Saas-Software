@@ -106,8 +106,11 @@ export async function createAppointment(
       return created.id;
     });
 
-    revalidatePath("/appointments");
-    revalidatePath("/dashboard");
+    // revalidatePath only busts the server render cache for one path;
+    // it does not touch the client Router Cache, so a Link click right
+    // after this write could still hand back a payload from before it.
+    // "layout" clears every route under the (app) group in both places.
+    revalidatePath("/", "layout");
     return { ok: true, appointmentId };
   } catch (error) {
     return toResult(error);
@@ -150,8 +153,11 @@ export async function setAppointmentStatus(
       return { ok: false, error: "That appointment no longer exists." };
     }
 
-    revalidatePath("/appointments");
-    revalidatePath("/dashboard");
+    // revalidatePath only busts the server render cache for one path;
+    // it does not touch the client Router Cache, so a Link click right
+    // after this write could still hand back a payload from before it.
+    // "layout" clears every route under the (app) group in both places.
+    revalidatePath("/", "layout");
     return { ok: true, appointmentId };
   } catch (error) {
     return toResult(error);

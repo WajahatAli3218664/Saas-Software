@@ -120,7 +120,11 @@ export async function createService(
       metadata: { name: created.name, price: created.price },
     });
 
-    revalidatePath("/services");
+    // revalidatePath only busts the server render cache for one path;
+    // it does not touch the client Router Cache, so a Link click right
+    // after this write could still hand back a payload from before it.
+    // "layout" clears every route under the (app) group in both places.
+    revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
     return toResult(error);
@@ -183,7 +187,11 @@ export async function updateService(
       });
     }
 
-    revalidatePath("/services");
+    // revalidatePath only busts the server render cache for one path;
+    // it does not touch the client Router Cache, so a Link click right
+    // after this write could still hand back a payload from before it.
+    // "layout" clears every route under the (app) group in both places.
+    revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
     return toResult(error);
@@ -204,7 +212,11 @@ export async function toggleService(
         and(eq(services.id, serviceId), eq(services.clinicId, clinic.id)),
       );
 
-    revalidatePath("/services");
+    // revalidatePath only busts the server render cache for one path;
+    // it does not touch the client Router Cache, so a Link click right
+    // after this write could still hand back a payload from before it.
+    // "layout" clears every route under the (app) group in both places.
+    revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
     return toResult(error);
@@ -246,7 +258,11 @@ export async function createCategory(
       sortOrder: existing?.value ?? 0,
     });
 
-    revalidatePath("/services");
+    // revalidatePath only busts the server render cache for one path;
+    // it does not touch the client Router Cache, so a Link click right
+    // after this write could still hand back a payload from before it.
+    // "layout" clears every route under the (app) group in both places.
+    revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
     return toResult(error);

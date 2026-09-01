@@ -105,7 +105,11 @@ export async function createPatient(
       })
       .returning();
 
-    revalidatePath("/patients");
+    // revalidatePath only busts the server render cache for one path;
+    // it does not touch the client Router Cache, so a Link click right
+    // after this write could still hand back a payload from before it.
+    // "layout" clears every route under the (app) group in both places.
+    revalidatePath("/", "layout");
     return { ok: true, patientId: created.id };
   } catch (error) {
     return toResult(error);
@@ -149,8 +153,11 @@ export async function updatePatient(
       return { ok: false, error: "That patient no longer exists." };
     }
 
-    revalidatePath("/patients");
-    revalidatePath(`/patients/${patientId}`);
+    // revalidatePath only busts the server render cache for one path;
+    // it does not touch the client Router Cache, so a Link click right
+    // after this write could still hand back a payload from before it.
+    // "layout" clears every route under the (app) group in both places.
+    revalidatePath("/", "layout");
     return { ok: true, patientId };
   } catch (error) {
     return toResult(error);

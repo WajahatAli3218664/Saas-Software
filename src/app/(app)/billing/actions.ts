@@ -250,8 +250,11 @@ export async function createInvoice(
       return invoice.id;
     });
 
-    revalidatePath("/billing");
-    revalidatePath("/dashboard");
+    // revalidatePath only busts the server render cache for one path;
+    // it does not touch the client Router Cache, so a Link click right
+    // after this write could still hand back a payload from before it.
+    // "layout" clears every route under the (app) group in both places.
+    revalidatePath("/", "layout");
     return { ok: true, invoiceId };
   } catch (error) {
     return toResult(error);
@@ -322,9 +325,11 @@ export async function recordPayment(
         .where(eq(invoices.id, invoiceId));
     });
 
-    revalidatePath("/billing");
-    revalidatePath(`/billing/${invoiceId}`);
-    revalidatePath("/dashboard");
+    // revalidatePath only busts the server render cache for one path;
+    // it does not touch the client Router Cache, so a Link click right
+    // after this write could still hand back a payload from before it.
+    // "layout" clears every route under the (app) group in both places.
+    revalidatePath("/", "layout");
     return { ok: true, invoiceId };
   } catch (error) {
     return toResult(error);
@@ -364,9 +369,11 @@ export async function voidInvoice(
       metadata: { number: invoice.number, reason, total: invoice.total },
     });
 
-    revalidatePath("/billing");
-    revalidatePath(`/billing/${invoiceId}`);
-    revalidatePath("/dashboard");
+    // revalidatePath only busts the server render cache for one path;
+    // it does not touch the client Router Cache, so a Link click right
+    // after this write could still hand back a payload from before it.
+    // "layout" clears every route under the (app) group in both places.
+    revalidatePath("/", "layout");
     return { ok: true, invoiceId };
   } catch (error) {
     return toResult(error);

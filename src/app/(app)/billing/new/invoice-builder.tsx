@@ -343,6 +343,11 @@ export function InvoiceBuilder({
                               className="text-xs"
                             >
                               Discount
+                              <span className="text-muted-foreground ml-1 font-normal normal-case">
+                                (up to{" "}
+                                {Math.min(line.maxDiscountPercent, maxDiscount)}
+                                %)
+                              </span>
                             </Label>
                             <Select
                               value={line.discountType ?? "none"}

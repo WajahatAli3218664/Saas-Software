@@ -187,12 +187,13 @@ export async function updateMemberGrants(
       },
     });
 
-    // Discount ceilings and grant flags are read by every billing screen,
-    // not just the staff list, so widen the revalidation beyond /settings.
-    revalidatePath("/settings/staff");
-    revalidatePath("/billing");
-    revalidatePath("/billing/new");
-    revalidatePath("/services");
+    // revalidatePath only busts the server's render cache for that one path;
+    // it does nothing to the client Router Cache, so a Link click into
+    // /billing/new straight after saving could still hand back a payload
+    // held from before this write. "layout" walks every route under the
+    // (app) group's layout and clears both, which is what actually forces a
+    // fresh render on the next visit rather than the next hard reload.
+    revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {
     return toResult(error);
