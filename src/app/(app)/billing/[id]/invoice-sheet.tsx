@@ -31,7 +31,10 @@ export function InvoiceSheet({
   });
 
   return (
-    <article className="print-sheet bg-card rounded-lg border p-6 sm:p-8 print:rounded-none print:border-0 print:p-0">
+    <article
+      id="invoice-sheet"
+      className="print-sheet bg-card rounded-lg border p-6 sm:p-8 print:rounded-none print:border-0 print:p-0"
+    >
       <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-5">
         <div className="flex items-start gap-3">
           {clinic.logoUrl && (

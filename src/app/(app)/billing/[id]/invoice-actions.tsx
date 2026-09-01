@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Printer, Ban, Wallet } from "lucide-react";
+import { Printer, Ban, Wallet, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,11 +32,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatMoney, minorUnitFactor, parseMoney } from "@/lib/money";
+import { downloadInvoicePdf, sanitizeFilename } from "@/lib/download-invoice-pdf";
 import { recordPayment, voidInvoice } from "../actions";
 
 export function InvoiceActions({
   invoiceId,
   invoiceNumber,
+  patientName,
   outstanding,
   currency,
   status,
@@ -45,6 +47,7 @@ export function InvoiceActions({
 }: {
   invoiceId: string;
   invoiceNumber: string;
+  patientName: string | null;
   outstanding: number;
   currency: string;
   status: string;
@@ -56,7 +59,22 @@ export function InvoiceActions({
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("cash");
   const [reason, setReason] = useState("");
+  const [downloading, setDownloading] = useState(false);
   const [pending, startTransition] = useTransition();
+
+  async function downloadPdf() {
+    setDownloading(true);
+    try {
+      const filename = sanitizeFilename(
+        patientName ? `${invoiceNumber} — ${patientName}` : invoiceNumber,
+      );
+      await downloadInvoicePdf(filename);
+    } catch {
+      toast.error("Could not create the PDF. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   const isVoid = status === "void";
   const settled = outstanding <= 0;
@@ -101,6 +119,19 @@ export function InvoiceActions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <Button
+        size="sm"
+        onClick={downloadPdf}
+        disabled={downloading}
+      >
+        {downloading ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+        ) : (
+          <Download className="size-4" aria-hidden />
+        )}
+        {downloading ? "Preparing…" : "Download PDF"}
+      </Button>
+
       <Button variant="outline" size="sm" onClick={() => window.print()}>
         <Printer className="size-4" aria-hidden />
         Print

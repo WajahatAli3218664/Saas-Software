@@ -135,6 +135,7 @@ export default async function InvoicePage({ params }: PageProps<"/billing/[id]">
         <InvoiceActions
           invoiceId={invoice.id}
           invoiceNumber={invoice.number}
+          patientName={patient?.fullName ?? null}
           outstanding={outstanding}
           currency={clinic.currency}
           status={invoice.status}
