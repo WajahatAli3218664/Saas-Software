@@ -21,7 +21,43 @@ import { InvoiceActions } from "./invoice-actions";
 // be cached or shared across requests.
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Invoice" };
+/**
+ * The document title, which Chrome and every other browser use as the
+ * default filename when the print dialog's destination is "Save as PDF" —
+ * this is what puts the invoice number and patient name into the saved
+ * file's name without the operator typing it in.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/billing/[id]">) {
+  const { id } = await params;
+  const { clinic } = await requireTenantSession();
+
+  const [invoice] = await db
+    .select({ number: invoices.number, patientId: invoices.patientId })
+    .from(invoices)
+    .where(and(eq(invoices.id, id), eq(invoices.clinicId, clinic.id)))
+    .limit(1);
+
+  if (!invoice) return { title: "Invoice" };
+
+  const patient = invoice.patientId
+    ? await db
+        .select({ fullName: patients.fullName })
+        .from(patients)
+        .where(eq(patients.id, invoice.patientId))
+        .limit(1)
+        .then((rows) => rows[0] ?? null)
+    : null;
+
+  const title = patient
+    ? `${invoice.number} — ${patient.fullName}`
+    : invoice.number;
+
+  // .absolute skips the layout's "%s · AesthetIQ" template — the saved PDF's
+  // filename should be the invoice itself, not padded with the brand name.
+  return { title: { absolute: title } };
+}
 
 export default async function InvoicePage({ params }: PageProps<"/billing/[id]">) {
   const { id } = await params;
