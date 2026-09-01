@@ -6,8 +6,26 @@
 /** Currencies whose minor unit is not 1/100 of the major unit. */
 const ZERO_DECIMAL = new Set(["JPY", "KRW", "VND", "CLP", "ISK"]);
 
+/**
+ * Currencies still stored in minor units, but whose fractional part nobody
+ * writes down in practice. A clinic in Karachi prices in whole rupees, and
+ * "Rs 3,000.00" reads as a machine's output rather than a price list.
+ */
+const WHOLE_UNIT_DISPLAY = new Set(["PKR", "INR", "LKR", "NPR", "BDT"]);
+
 export function minorUnitFactor(currency: string): number {
   return ZERO_DECIMAL.has(currency.toUpperCase()) ? 1 : 100;
+}
+
+function fractionDigits(currency: string, amountInMajor: number): number {
+  const code = currency.toUpperCase();
+  if (ZERO_DECIMAL.has(code)) return 0;
+  // Show paisa only when there actually are some — a part payment of
+  // Rs 1,250.50 must not be rounded away.
+  if (WHOLE_UNIT_DISPLAY.has(code)) {
+    return Number.isInteger(amountInMajor) ? 0 : 2;
+  }
+  return 2;
 }
 
 export function formatMoney(
@@ -16,12 +34,14 @@ export function formatMoney(
   locale = "en-PK",
 ): string {
   const factor = minorUnitFactor(currency);
+  const amount = minorUnits / factor;
+  const digits = fractionDigits(currency, amount);
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
-    minimumFractionDigits: factor === 1 ? 0 : 2,
-    maximumFractionDigits: factor === 1 ? 0 : 2,
-  }).format(minorUnits / factor);
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(amount);
 }
 
 /** Compact form for dashboard tiles: PKR 1.2M rather than PKR 1,200,000.00 */
