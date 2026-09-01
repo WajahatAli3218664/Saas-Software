@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { Stethoscope } from "lucide-react";
-import { getTenantSession } from "@/lib/auth";
+import { ensureClinicForSession } from "@/lib/ensure-clinic";
 import { can } from "@/lib/permissions";
 import { SidebarNav, type NavItem } from "@/components/app/sidebar";
 import { TrialBanner } from "@/components/app/trial-banner";
@@ -10,10 +10,10 @@ import { ThemeToggle } from "@/components/app/theme-toggle";
 import { MobileNav } from "@/components/app/mobile-nav";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  const session = await getTenantSession();
-
-  // Middleware has already sent anyone without an org to onboarding; reaching
-  // here without a session means the clinic row is missing behind a valid org.
+  // Middleware has already sent anyone without an org to onboarding. Reaching
+  // here with an org but no clinic means the provisioning webhook has not
+  // landed, so provision on the spot rather than bouncing them in a loop.
+  const session = await ensureClinicForSession();
   if (!session) redirect("/onboarding");
 
   const { clinic, member, subscription } = session;
