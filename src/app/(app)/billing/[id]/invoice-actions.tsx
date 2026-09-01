@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Printer, Ban, Wallet, Download, Loader2 } from "lucide-react";
+import { Printer, Ban, Wallet, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -62,13 +62,20 @@ export function InvoiceActions({
   const [downloading, setDownloading] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  async function downloadPdf() {
+  // "Print" saves a PDF directly rather than opening the OS print dialog —
+  // Windows' "Microsoft Print to PDF" destination ignores the page title and
+  // always prompts for a filename, so the dialog route can never reliably
+  // name the file. This gets the invoice onto disk, correctly named, in one
+  // click; from there the operator can open and print it normally if a
+  // physical printer is what they actually wanted.
+  async function handlePrint() {
     setDownloading(true);
     try {
       const filename = sanitizeFilename(
         patientName ? `${invoiceNumber} — ${patientName}` : invoiceNumber,
       );
       await downloadInvoicePdf(filename);
+      toast.success("Saved to your downloads");
     } catch {
       toast.error("Could not create the PDF. Please try again.");
     } finally {
@@ -119,22 +126,13 @@ export function InvoiceActions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button
-        size="sm"
-        onClick={downloadPdf}
-        disabled={downloading}
-      >
+      <Button size="sm" onClick={handlePrint} disabled={downloading}>
         {downloading ? (
           <Loader2 className="size-4 animate-spin" aria-hidden />
         ) : (
-          <Download className="size-4" aria-hidden />
+          <Printer className="size-4" aria-hidden />
         )}
-        {downloading ? "Preparing…" : "Download PDF"}
-      </Button>
-
-      <Button variant="outline" size="sm" onClick={() => window.print()}>
-        <Printer className="size-4" aria-hidden />
-        Print
+        {downloading ? "Preparing…" : "Print"}
       </Button>
 
       {canRecordPayment && !isVoid && !settled && (
