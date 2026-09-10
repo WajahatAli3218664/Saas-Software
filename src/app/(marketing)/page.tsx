@@ -22,7 +22,9 @@ import { TiltCard } from "@/components/marketing/tilt-card";
 import { CountUp } from "@/components/marketing/count-up";
 import { HeroContent } from "@/components/marketing/hero-content";
 import { ClosingCta } from "@/components/marketing/closing-cta";
+import { PermissionDemo } from "@/components/marketing/permission-demo";
 import { getPriceRegion } from "@/lib/geo";
+import { REGION_CURRENCY } from "@/config/plans";
 
 const FEATURES = [
   {
@@ -200,6 +202,27 @@ export default async function LandingPage() {
               </RevealPop>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* The permission rule, live — the page's second signature moment,
+          earned by being something to try rather than more to look at. */}
+      <section className="border-b">
+        <div className="mx-auto w-full max-w-3xl px-4 py-20 sm:px-6">
+          <Reveal>
+            <div className="mb-8 flex flex-col items-center gap-3 text-center">
+              <h2 className="font-display text-3xl font-semibold tracking-tight text-balance">
+                Not a checkbox. A rule that holds.
+              </h2>
+              <p className="text-muted-foreground max-w-md">
+                Change the role, try a discount past its limit, and watch what
+                actually happens on an invoice.
+              </p>
+            </div>
+          </Reveal>
+          <RevealPop delay={0.08}>
+            <PermissionDemo currency={REGION_CURRENCY[region]} />
+          </RevealPop>
         </div>
       </section>
 
