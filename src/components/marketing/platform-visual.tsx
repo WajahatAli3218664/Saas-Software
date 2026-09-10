@@ -37,8 +37,11 @@ const CLINICS = [
   },
 ];
 
-/** What the treatment actually is, not a repeated chip shape — the same
- *  category logic the 3D scene uses to pick its own hand-drawn glyph. */
+/** The app's own real service-category colours — Injectables, Skin
+ *  Treatments, Laser & Devices — cycled by position so three tiles are
+ *  never the same colour even when two treatments share a category. */
+const TILE_COLORS = ["#0d9488", "#6366f1", "#d97706"];
+
 function iconFor(service: string) {
   const s = service.toLowerCase();
   if (s.includes("botox") || s.includes("filler")) return Syringe;
@@ -69,27 +72,34 @@ function PlatformFallback() {
           </div>
 
           {clinic.services.length > 0 ? (
-            <ul className="flex flex-col gap-2">
-              {clinic.services.map((service) => {
-                const Icon = iconFor(service);
-                return (
-                  <li
-                    key={service}
-                    className="text-foreground flex items-center gap-2 text-xs"
-                  >
-                    <Icon
-                      className="text-primary size-3.5 shrink-0"
-                      aria-hidden
-                    />
-                    <span className="truncate">{service}</span>
-                  </li>
-                );
-              })}
-            </ul>
+            <>
+              <div className="flex justify-center gap-2.5 py-1">
+                {clinic.services.map((service, i) => {
+                  const Icon = iconFor(service);
+                  return (
+                    <span
+                      key={service}
+                      className="grid size-9 place-items-center rounded-lg shadow-sm"
+                      style={{
+                        background: `linear-gradient(180deg, ${TILE_COLORS[i % 3]}, ${TILE_COLORS[i % 3]}dd)`,
+                      }}
+                    >
+                      <Icon className="size-4 text-white" aria-hidden />
+                    </span>
+                  );
+                })}
+              </div>
+              <p className="text-muted-foreground text-center font-mono text-[0.65rem]">
+                {clinic.services.length} treatments on the price list
+              </p>
+            </>
           ) : (
-            <p className="text-muted-foreground text-xs italic">
-              Price list starts empty.
-            </p>
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 py-2">
+              <span className="border-muted-foreground/40 size-9 rounded-lg border-2 border-dashed" />
+              <p className="text-muted-foreground text-center text-[0.65rem]">
+                Price list starts empty
+              </p>
+            </div>
           )}
 
           <p className="text-primary mt-auto pt-1 text-xs font-medium">

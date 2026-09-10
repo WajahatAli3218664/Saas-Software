@@ -236,6 +236,64 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         ctx.restore();
       }
 
+      // The app's own service-category colours (see tenant.ts's starter
+      // catalogue: Injectables, Skin Treatments, Laser & Devices) — cycled
+      // by position rather than mapped strictly to category, so three
+      // tiles never repeat the same colour even when two treatments are
+      // both injectables.
+      const TILE_COLORS = ["#0d9488", "#6366f1", "#d97706"];
+
+      function shiftLightness(hex: string, amount: number): string {
+        const num = parseInt(hex.slice(1), 16);
+        const clamp = (v: number) => Math.min(255, Math.max(0, v));
+        const r = clamp(((num >> 16) & 0xff) + amount);
+        const g = clamp(((num >> 8) & 0xff) + amount);
+        const b = clamp((num & 0xff) + amount);
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+
+      /** A shaded, gradient-filled tile with a soft drop shadow — reads as
+       *  a small physical item rather than a flat icon on a flat chip. */
+      function drawServiceTile(
+        ctx: CanvasRenderingContext2D,
+        kind: ServiceCategory,
+        color: string,
+        x: number,
+        y: number,
+        size: number,
+      ) {
+        ctx.save();
+        ctx.shadowColor = "rgba(0, 0, 0, 0.28)";
+        ctx.shadowBlur = 16;
+        ctx.shadowOffsetY = 6;
+
+        const gradient = ctx.createLinearGradient(x, y, x, y + size);
+        gradient.addColorStop(0, shiftLightness(color, 22));
+        gradient.addColorStop(1, color);
+        ctx.fillStyle = gradient;
+        roundRect(ctx, x, y, size, size, size * 0.28);
+        ctx.fill();
+        ctx.restore();
+
+        // A faint inner highlight along the top edge, like a bevel.
+        ctx.save();
+        ctx.globalAlpha = 0.18;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        roundRect(
+          ctx,
+          x + 2,
+          y + 2,
+          size - 4,
+          size - 4,
+          size * 0.26,
+        );
+        ctx.stroke();
+        ctx.restore();
+
+        drawServiceIcon(ctx, kind, x + size / 2, y + size / 2, size * 0.46, "#ffffff");
+      }
+
       function drawCard(card: CardMesh, clinic: (typeof CLINICS)[number]) {
         const c = palette();
         const displayFont = resolveCssFontFamily("--font-display", "Georgia, serif");
@@ -266,58 +324,65 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         ctx.font = `700 30px ${displayFont}`;
         wrapText(ctx, clinic.name, 40, 130, TEX_W - 80, 36);
 
-        // Each clinic's own catalogue, drawn as the actual instruments a
-        // treatment uses — a syringe, a laser, a droplet — rather than a
-        // repeated chip shape. This is what fills the card, and it's meant
-        // to read as small illustrated items, not more small cards.
-        const rowHeight = 46;
-        const rowGap = 8;
-        const maxLabelWidth = TEX_W - 80 - 46;
-        let rowY = 214;
+        // Each clinic's own catalogue, as a small cluster of coloured tiles
+        // rather than a list of names — the colours are the platform's own
+        // real service-category colours (Injectables, Skin Treatments,
+        // Laser & Devices), so this isn't an invented marketing palette.
+        // Deliberately not text: a line of names next to icons still reads
+        // as a receipt; a row of solid, shaded tiles reads as items.
+        const tileArea = { top: 214, height: 200 };
 
         if (clinic.services.length === 0) {
+          const size = 88;
+          const x = TEX_W / 2 - size / 2;
+          const y = tileArea.top + (tileArea.height - size) / 2;
           ctx.strokeStyle = c.mutedForeground;
-          ctx.globalAlpha = 0.5;
-          ctx.setLineDash([4, 6]);
-          ctx.lineWidth = 2;
-          roundRect(ctx, 40, rowY, TEX_W - 80, rowHeight, rowHeight / 2);
+          ctx.globalAlpha = 0.45;
+          ctx.setLineDash([5, 7]);
+          ctx.lineWidth = 2.5;
+          roundRect(ctx, x, y, size, size, size * 0.26);
           ctx.stroke();
           ctx.setLineDash([]);
           ctx.globalAlpha = 1;
 
           ctx.fillStyle = c.mutedForeground;
-          ctx.font = `500 18px ${sansFont}`;
+          ctx.font = `500 17px ${sansFont}`;
           ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
           ctx.fillText(
             "Price list starts empty",
-            40 + (TEX_W - 80) / 2,
-            rowY + rowHeight / 2 + 1,
+            TEX_W / 2,
+            tileArea.top + tileArea.height + 30,
           );
           ctx.textAlign = "left";
-          ctx.textBaseline = "alphabetic";
         } else {
-          for (const service of clinic.services) {
-            const iconCenterY = rowY + rowHeight / 2;
-            drawServiceIcon(ctx, categoryFor(service), 40 + 16, iconCenterY, 30, c.primary);
+          const tileSize = 88;
+          const gap = 22;
+          const count = clinic.services.length;
+          const rowWidth = count * tileSize + (count - 1) * gap;
+          let x = TEX_W / 2 - rowWidth / 2;
+          const y = tileArea.top + (tileArea.height - tileSize) / 2;
 
-            ctx.font = `500 19px ${sansFont}`;
-            let label = service;
-            while (
-              ctx.measureText(label).width > maxLabelWidth &&
-              label.length > 3
-            ) {
-              label = label.slice(0, -1);
-            }
-            if (label !== service) label = `${label.trimEnd()}…`;
+          clinic.services.forEach((service, i) => {
+            drawServiceTile(
+              ctx,
+              categoryFor(service),
+              TILE_COLORS[i % TILE_COLORS.length],
+              x,
+              y,
+              tileSize,
+            );
+            x += tileSize + gap;
+          });
 
-            ctx.fillStyle = c.foreground;
-            ctx.textBaseline = "middle";
-            ctx.fillText(label, 40 + 46, iconCenterY + 1);
-            ctx.textBaseline = "alphabetic";
-
-            rowY += rowHeight + rowGap;
-          }
+          ctx.fillStyle = c.mutedForeground;
+          ctx.font = `500 17px ${monoFont}`;
+          ctx.textAlign = "center";
+          ctx.fillText(
+            `${count} treatments on the price list`,
+            TEX_W / 2,
+            tileArea.top + tileArea.height + 30,
+          );
+          ctx.textAlign = "left";
         }
 
         ctx.strokeStyle = c.border;
