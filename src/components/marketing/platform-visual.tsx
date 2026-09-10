@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { Building2 } from "lucide-react";
+import { Building2, Syringe, Zap, Droplet, FlaskConical } from "lucide-react";
 
 const PlatformScene = dynamic(
   () => import("./platform-scene").then((m) => m.PlatformScene),
@@ -37,13 +37,24 @@ const CLINICS = [
   },
 ];
 
+/** What the treatment actually is, not a repeated chip shape — the same
+ *  category logic the 3D scene uses to pick its own hand-drawn glyph. */
+function iconFor(service: string) {
+  const s = service.toLowerCase();
+  if (s.includes("botox") || s.includes("filler")) return Syringe;
+  if (s.includes("laser")) return Zap;
+  if (s.includes("facial") || s.includes("hydra") || s.includes("peel"))
+    return Droplet;
+  return FlaskConical;
+}
+
 function PlatformFallback() {
   return (
     <div className="grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
       {CLINICS.map((clinic) => (
         <div
           key={clinic.name}
-          className="bg-card flex flex-col gap-2.5 rounded-xl border p-4"
+          className="bg-card flex flex-col gap-3 rounded-xl border p-4"
         >
           <span className="bg-primary/10 text-primary grid size-7 place-items-center rounded-md">
             <Building2 className="size-3.5" aria-hidden />
@@ -58,19 +69,26 @@ function PlatformFallback() {
           </div>
 
           {clinic.services.length > 0 ? (
-            <ul className="flex flex-col gap-1.5">
-              {clinic.services.map((service) => (
-                <li
-                  key={service}
-                  className="bg-muted truncate rounded-full px-2.5 py-1 text-xs"
-                >
-                  {service}
-                </li>
-              ))}
+            <ul className="flex flex-col gap-2">
+              {clinic.services.map((service) => {
+                const Icon = iconFor(service);
+                return (
+                  <li
+                    key={service}
+                    className="text-foreground flex items-center gap-2 text-xs"
+                  >
+                    <Icon
+                      className="text-primary size-3.5 shrink-0"
+                      aria-hidden
+                    />
+                    <span className="truncate">{service}</span>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
-            <p className="text-muted-foreground border-muted-foreground/40 rounded-full border border-dashed px-2.5 py-1 text-center text-xs">
-              Price list starts empty
+            <p className="text-muted-foreground text-xs italic">
+              Price list starts empty.
             </p>
           )}
 

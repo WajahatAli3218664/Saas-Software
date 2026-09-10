@@ -145,6 +145,97 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         ctx.closePath();
       }
 
+      type ServiceCategory = "inject" | "laser" | "facial" | "flask";
+
+      /** Matches the same keyword logic the DOM fallback uses, so both
+       *  render forms agree on which item a treatment gets. */
+      function categoryFor(service: string): ServiceCategory {
+        const s = service.toLowerCase();
+        if (s.includes("botox") || s.includes("filler")) return "inject";
+        if (s.includes("laser")) return "laser";
+        if (s.includes("facial") || s.includes("hydra") || s.includes("peel"))
+          return "facial";
+        return "flask";
+      }
+
+      /** Small hand-drawn pictograms — a syringe, a laser burst, a droplet,
+       *  a flask — standing in for the actual instrument each treatment
+       *  uses, at a size too small for anything more literal to read well. */
+      function drawServiceIcon(
+        ctx: CanvasRenderingContext2D,
+        kind: ServiceCategory,
+        cx: number,
+        cy: number,
+        size: number,
+        color: string,
+      ) {
+        const s = size / 2;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        if (kind === "inject") {
+          ctx.save();
+          ctx.rotate(-Math.PI / 4);
+          roundRect(ctx, -s * 0.9, -s * 0.28, s * 1.1, s * 0.56, s * 0.14);
+          ctx.fill();
+          ctx.lineWidth = size * 0.09;
+          ctx.beginPath();
+          ctx.moveTo(-s * 0.9, 0);
+          ctx.lineTo(-s * 1.3, 0);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(-s * 1.3, -s * 0.2);
+          ctx.lineTo(-s * 1.3, s * 0.2);
+          ctx.stroke();
+          ctx.lineWidth = size * 0.045;
+          ctx.beginPath();
+          ctx.moveTo(s * 0.2, 0);
+          ctx.lineTo(s * 1.05, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else if (kind === "laser") {
+          ctx.lineWidth = size * 0.13;
+          for (let i = 0; i < 4; i++) {
+            const angle = (Math.PI / 2) * i + Math.PI / 4;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(angle) * s * 0.28, Math.sin(angle) * s * 0.28);
+            ctx.lineTo(Math.cos(angle) * s * 0.95, Math.sin(angle) * s * 0.95);
+            ctx.stroke();
+          }
+          ctx.beginPath();
+          ctx.arc(0, 0, s * 0.22, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (kind === "facial") {
+          ctx.beginPath();
+          ctx.moveTo(0, -s * 0.95);
+          ctx.quadraticCurveTo(s * 0.85, s * 0.15, 0, s * 0.9);
+          ctx.quadraticCurveTo(-s * 0.85, s * 0.15, 0, -s * 0.95);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(-s * 0.22, -s * 0.9);
+          ctx.lineTo(s * 0.22, -s * 0.9);
+          ctx.lineTo(s * 0.22, -s * 0.15);
+          ctx.lineTo(s * 0.85, s * 0.85);
+          ctx.lineTo(-s * 0.85, s * 0.85);
+          ctx.lineTo(-s * 0.22, -s * 0.15);
+          ctx.closePath();
+          ctx.fill();
+          ctx.lineWidth = size * 0.12;
+          ctx.beginPath();
+          ctx.moveTo(-s * 0.3, -s * 0.9);
+          ctx.lineTo(s * 0.3, -s * 0.9);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+
       function drawCard(card: CardMesh, clinic: (typeof CLINICS)[number]) {
         const c = palette();
         const displayFont = resolveCssFontFamily("--font-display", "Georgia, serif");
@@ -175,21 +266,21 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         ctx.font = `700 30px ${displayFont}`;
         wrapText(ctx, clinic.name, 40, 130, TEX_W - 80, 36);
 
-        // Each clinic's own catalogue, as small pills — concrete proof of
-        // "every clinic gets its own price list" rather than a shared menu,
-        // and what actually fills the card rather than leaving it empty.
-        const pillHeight = 42;
-        const pillGap = 14;
-        const pillPadX = 18;
-        const maxPillWidth = TEX_W - 80;
-        let pillY = 210;
+        // Each clinic's own catalogue, drawn as the actual instruments a
+        // treatment uses — a syringe, a laser, a droplet — rather than a
+        // repeated chip shape. This is what fills the card, and it's meant
+        // to read as small illustrated items, not more small cards.
+        const rowHeight = 46;
+        const rowGap = 8;
+        const maxLabelWidth = TEX_W - 80 - 46;
+        let rowY = 214;
 
         if (clinic.services.length === 0) {
           ctx.strokeStyle = c.mutedForeground;
           ctx.globalAlpha = 0.5;
           ctx.setLineDash([4, 6]);
           ctx.lineWidth = 2;
-          roundRect(ctx, 40, pillY, maxPillWidth, pillHeight, pillHeight / 2);
+          roundRect(ctx, 40, rowY, TEX_W - 80, rowHeight, rowHeight / 2);
           ctx.stroke();
           ctx.setLineDash([]);
           ctx.globalAlpha = 1;
@@ -200,37 +291,32 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
           ctx.textBaseline = "middle";
           ctx.fillText(
             "Price list starts empty",
-            40 + maxPillWidth / 2,
-            pillY + pillHeight / 2 + 1,
+            40 + (TEX_W - 80) / 2,
+            rowY + rowHeight / 2 + 1,
           );
           ctx.textAlign = "left";
           ctx.textBaseline = "alphabetic";
         } else {
           for (const service of clinic.services) {
+            const iconCenterY = rowY + rowHeight / 2;
+            drawServiceIcon(ctx, categoryFor(service), 40 + 16, iconCenterY, 30, c.primary);
+
             ctx.font = `500 19px ${sansFont}`;
             let label = service;
             while (
-              ctx.measureText(label).width > maxPillWidth - pillPadX * 2 &&
+              ctx.measureText(label).width > maxLabelWidth &&
               label.length > 3
             ) {
               label = label.slice(0, -1);
             }
             if (label !== service) label = `${label.trimEnd()}…`;
-            const pillWidth = Math.min(
-              ctx.measureText(label).width + pillPadX * 2,
-              maxPillWidth,
-            );
-
-            ctx.fillStyle = c.muted;
-            roundRect(ctx, 40, pillY, pillWidth, pillHeight, pillHeight / 2);
-            ctx.fill();
 
             ctx.fillStyle = c.foreground;
             ctx.textBaseline = "middle";
-            ctx.fillText(label, 40 + pillPadX, pillY + pillHeight / 2 + 1);
+            ctx.fillText(label, 40 + 46, iconCenterY + 1);
             ctx.textBaseline = "alphabetic";
 
-            pillY += pillHeight + pillGap;
+            rowY += rowHeight + rowGap;
           }
         }
 
