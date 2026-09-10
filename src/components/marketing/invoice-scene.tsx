@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useReducedMotion } from "framer-motion";
+import { resolveCssColor, resolveCssFontFamily } from "@/lib/resolve-css-theme";
 
 /**
  * The hero's centrepiece: an actual invoice, rendered as a floating 3D card
@@ -59,34 +60,18 @@ export function InvoiceScene({
         return;
       }
 
-      // ---- Theme colors, resolved via the DOM so oklch() tokens come back
-      // as rgb() strings three.js's Color parser actually understands. ----
-      function resolveVar(name: string): string {
-        const probe = document.createElement("span");
-        probe.style.color = `var(${name})`;
-        document.body.appendChild(probe);
-        const rgb = getComputedStyle(probe).color;
-        probe.remove();
-        return rgb || "rgb(128,128,128)";
-      }
-
       const palette = () => ({
-        card: resolveVar("--card"),
-        border: resolveVar("--border"),
-        muted: resolveVar("--muted"),
-        primary: resolveVar("--primary"),
-        foreground: resolveVar("--foreground"),
-        mutedForeground: resolveVar("--muted-foreground"),
-        success: resolveVar("--success"),
-        background: resolveVar("--background"),
+        card: resolveCssColor("--card"),
+        border: resolveCssColor("--border"),
+        muted: resolveCssColor("--muted"),
+        primary: resolveCssColor("--primary"),
+        foreground: resolveCssColor("--foreground"),
+        mutedForeground: resolveCssColor("--muted-foreground"),
+        success: resolveCssColor("--success"),
+        background: resolveCssColor("--background"),
       });
 
-      function fontFamily(varName: string, fallback: string): string {
-        const value = getComputedStyle(document.documentElement)
-          .getPropertyValue(varName)
-          .trim();
-        return value || fallback;
-      }
+      const fontFamily = resolveCssFontFamily;
 
       // ---- Scene ----
       const scene = new THREE.Scene();

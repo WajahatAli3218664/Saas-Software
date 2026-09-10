@@ -23,6 +23,7 @@ import { CountUp } from "@/components/marketing/count-up";
 import { HeroContent } from "@/components/marketing/hero-content";
 import { ClosingCta } from "@/components/marketing/closing-cta";
 import { PermissionDemo } from "@/components/marketing/permission-demo";
+import { PlatformVisual } from "@/components/marketing/platform-visual";
 import { getPriceRegion } from "@/lib/geo";
 import { REGION_CURRENCY } from "@/config/plans";
 
@@ -166,7 +167,9 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* What makes it a platform */}
+      {/* What makes it a platform — the second three.js moment: one card
+          fanning out into three separate, real clinics, sitting right next
+          to the claim it's proving. */}
       <section className="border-b">
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
           <Reveal>
@@ -185,22 +188,28 @@ export default async function LandingPage() {
             </div>
           </Reveal>
 
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
-            {PLATFORM.map((item, i) => (
-              <RevealPop key={item.title} delay={i * 0.1}>
-                <TiltCard className="h-full">
-                  <div className="bg-card flex h-full flex-col gap-2.5 rounded-xl border p-5 transition-shadow duration-300 group-hover:shadow-lg">
-                    <span className="bg-primary/10 text-primary grid size-9 place-items-center rounded-lg transition-transform duration-300 group-hover:scale-110">
-                      <item.icon className="size-4.5" aria-hidden />
-                    </span>
-                    <h3 className="font-medium">{item.title}</h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
-                      {item.body}
-                    </p>
-                  </div>
-                </TiltCard>
-              </RevealPop>
-            ))}
+          <div className="mt-10 grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:gap-6">
+            <div className="grid gap-4">
+              {PLATFORM.map((item, i) => (
+                <RevealPop key={item.title} delay={i * 0.1}>
+                  <TiltCard>
+                    <div className="bg-card flex flex-col gap-2.5 rounded-xl border p-5 transition-shadow duration-300 group-hover:shadow-lg">
+                      <span className="bg-primary/10 text-primary grid size-9 place-items-center rounded-lg transition-transform duration-300 group-hover:scale-110">
+                        <item.icon className="size-4.5" aria-hidden />
+                      </span>
+                      <h3 className="font-medium">{item.title}</h3>
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        {item.body}
+                      </p>
+                    </div>
+                  </TiltCard>
+                </RevealPop>
+              ))}
+            </div>
+
+            <RevealPop delay={0.15} className="flex justify-center lg:justify-end">
+              <PlatformVisual />
+            </RevealPop>
           </div>
         </div>
       </section>
