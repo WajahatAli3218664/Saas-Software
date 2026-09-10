@@ -8,6 +8,11 @@ import {
   Building2,
   UserCog,
   Globe,
+  Syringe,
+  Droplet,
+  Zap,
+  Waves,
+  FlaskConical,
 } from "lucide-react";
 import {
   Accordion,
@@ -125,6 +130,46 @@ const FAQS = [
     a: "No. Every clinic starts with a 14-day trial at full Professional-tier access, no card required.",
   },
 ];
+
+/** The breadth of what the starter catalogue covers — aesthetic and
+ *  cosmetic treatments specifically, not general medical consultations,
+ *  since that's the clinic this software is actually built for. */
+const TREATMENTS = {
+  left: [
+    {
+      icon: Syringe,
+      title: "Injectable Treatments",
+      body: "Target fine lines, wrinkles, and refine facial features with expertly administered Botulinum Toxin injections.",
+    },
+    {
+      icon: Droplet,
+      title: "Dermal Fillers",
+      body: "Restore facial volume, enhance cheekbones, and plump lips for a naturally youthful appearance.",
+    },
+    {
+      icon: Zap,
+      title: "Laser Skin Resurfacing",
+      body: "Achieve smoother, clearer skin by targeting tone, texture, and imperfections with advanced laser technology.",
+    },
+  ],
+  right: [
+    {
+      icon: Sparkles,
+      title: "Chemical Peels & Radiance",
+      body: "Rejuvenate tired skin and unveil a glowing, smooth complexion with customised exfoliation.",
+    },
+    {
+      icon: Waves,
+      title: "Body Contouring & Sculpting",
+      body: "Non-invasive body shaping treatments to tone, tighten and target stubborn areas.",
+    },
+    {
+      icon: FlaskConical,
+      title: "PRP & Microneedling",
+      body: "Stimulate natural collagen production and tissue renewal for lasting skin revitalisation.",
+    },
+  ],
+};
 
 export default async function LandingPage() {
   const region = await getPriceRegion();
@@ -266,6 +311,50 @@ export default async function LandingPage() {
                   </p>
                 </div>
               </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* The treatments themselves — grounding the page in what an
+          aesthetic clinic actually runs, not general medical care. */}
+      <section className="border-b">
+        <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
+          <Reveal>
+            <div className="mb-10 flex flex-col items-center gap-3 text-center">
+              <span className="text-primary font-mono text-xs tracking-widest uppercase">
+                Built for aesthetic and cosmetic care
+              </span>
+              <h2 className="font-display max-w-2xl text-3xl font-semibold tracking-tight text-balance">
+                Injectables to body contouring — it&apos;s all in the price
+                list.
+              </h2>
+              <p className="text-muted-foreground max-w-lg">
+                The starter catalogue covers what aesthetic clinics actually
+                run, ready to rename and reprice as your own.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="grid gap-x-10 gap-y-10 sm:grid-cols-2">
+            {[TREATMENTS.left, TREATMENTS.right].map((column, colIndex) => (
+              <div key={colIndex} className="flex flex-col gap-8">
+                {column.map((item, i) => (
+                  <Reveal key={item.title} delay={(colIndex * 3 + i) * 0.05}>
+                    <div className="group flex gap-4">
+                      <span className="bg-primary/10 text-primary grid size-10 shrink-0 place-items-center rounded-lg transition-transform duration-300 group-hover:scale-110">
+                        <item.icon className="size-5" aria-hidden />
+                      </span>
+                      <div>
+                        <h3 className="font-medium">{item.title}</h3>
+                        <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+                          {item.body}
+                        </p>
+                      </div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
             ))}
           </div>
         </div>
