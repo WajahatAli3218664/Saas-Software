@@ -9,6 +9,12 @@ import {
   serviceCategories,
   members,
 } from "@/db/schema";
+import { STARTER_CATALOGUE } from "@/lib/tenant";
+
+const STARTER_SERVICE_COUNT = STARTER_CATALOGUE.reduce(
+  (total, group) => total + group.services.length,
+  0,
+);
 
 /** Day boundaries in the clinic's timezone, expressed as UTC instants. */
 export function dayRange(timezone: string, date = new Date()) {
@@ -259,4 +265,63 @@ export async function getStaff(clinicId: string) {
     .from(members)
     .where(eq(members.clinicId, clinicId))
     .orderBy(members.role, members.fullName);
+}
+
+export interface SetupProgress {
+  hasLogo: boolean;
+  hasContactDetails: boolean;
+  hasOwnServices: boolean;
+  hasStaff: boolean;
+  hasPatient: boolean;
+  hasInvoice: boolean;
+  done: number;
+  total: number;
+}
+
+/**
+ * Drives the dashboard's getting-started checklist. Every clinic is seeded
+ * with a starter catalogue and one member, so "has services" and "has staff"
+ * check for more than that baseline rather than for non-emptiness.
+ */
+export async function getSetupProgress(
+  clinicId: string,
+  clinic: { logoUrl: string | null; phone: string | null; addressLine: string | null },
+): Promise<SetupProgress> {
+  const [serviceRows, staffRows, patientRows, invoiceRows] = await Promise.all([
+    db
+      .select({ count: count() })
+      .from(services)
+      .where(eq(services.clinicId, clinicId)),
+    db
+      .select({ count: count() })
+      .from(members)
+      .where(eq(members.clinicId, clinicId)),
+    db
+      .select({ count: count() })
+      .from(patients)
+      .where(eq(patients.clinicId, clinicId)),
+    db
+      .select({ count: count() })
+      .from(invoices)
+      .where(eq(invoices.clinicId, clinicId)),
+  ]);
+
+  const steps = {
+    hasLogo: Boolean(clinic.logoUrl),
+    hasContactDetails: Boolean(clinic.phone && clinic.addressLine),
+    // The seed ships a starter catalogue, so this only counts as done once
+    // the clinic has priced up more than what it was given. Derived from the
+    // catalogue itself so editing the seed keeps this honest.
+    hasOwnServices: serviceRows[0].count > STARTER_SERVICE_COUNT,
+    hasStaff: staffRows[0].count > 1,
+    hasPatient: patientRows[0].count > 0,
+    hasInvoice: invoiceRows[0].count > 0,
+  };
+
+  const values = Object.values(steps);
+  return {
+    ...steps,
+    done: values.filter(Boolean).length,
+    total: values.length,
+  };
 }

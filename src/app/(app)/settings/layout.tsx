@@ -6,6 +6,9 @@ export default async function SettingsLayout({ children }: LayoutProps<"/setting
   const { member } = await requireTenantSession();
 
   const tabs = [{ href: "/settings", label: "Clinic" }];
+  if (can(member, "clinic:manage")) {
+    tabs.push({ href: "/settings/printers", label: "Printers" });
+  }
   if (can(member, "staff:manage")) {
     tabs.push({ href: "/settings/staff", label: "Staff & access" });
   }

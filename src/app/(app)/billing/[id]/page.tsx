@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
   invoices,
@@ -9,6 +9,7 @@ import {
   patients,
   payments,
   members,
+  printTemplates,
 } from "@/db/schema";
 import { requireTenantSession } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -71,7 +72,7 @@ export default async function InvoicePage({ params }: PageProps<"/billing/[id]">
 
   if (!invoice) notFound();
 
-  const [items, paymentRows, patient, issuer] = await Promise.all([
+  const [items, paymentRows, patient, issuer, printers] = await Promise.all([
     db
       .select()
       .from(invoiceItems)
@@ -109,6 +110,18 @@ export default async function InvoicePage({ params }: PageProps<"/billing/[id]">
           .limit(1)
           .then((rows) => rows[0] ?? null)
       : Promise.resolve(null),
+
+    // Default first, so printing with one click uses the clinic's usual
+    // printer and the rest are alternatives behind it.
+    db
+      .select({
+        id: printTemplates.id,
+        name: printTemplates.name,
+        paperSize: printTemplates.paperSize,
+      })
+      .from(printTemplates)
+      .where(eq(printTemplates.clinicId, clinic.id))
+      .orderBy(desc(printTemplates.isDefault), asc(printTemplates.createdAt)),
   ]);
 
   const outstanding = invoice.total - invoice.amountPaid;
@@ -141,6 +154,7 @@ export default async function InvoicePage({ params }: PageProps<"/billing/[id]">
           status={invoice.status}
           canRecordPayment={can(member, "payment:record")}
           canVoid={can(member, "invoice:void")}
+          printers={printers}
         />
       </header>
 

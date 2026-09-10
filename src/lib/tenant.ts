@@ -37,7 +37,7 @@ export async function uniqueSlug(name: string): Promise<string> {
 }
 
 /** Services every aesthetic clinic recognises, so a new tenant is not empty. */
-const STARTER_CATALOGUE: Array<{
+export const STARTER_CATALOGUE: Array<{
   category: string;
   color: string;
   services: Array<{ name: string; price: number; minutes: number }>;

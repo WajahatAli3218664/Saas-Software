@@ -6,10 +6,12 @@ import {
   getDashboardStats,
   getRecentInvoices,
   getRevenueTrend,
+  getSetupProgress,
   getTopServices,
 } from "@/lib/queries";
 import { formatMoney, formatMoneyCompact } from "@/lib/money";
 import { StatTile, Sparkline } from "@/components/app/stat-tile";
+import { SetupChecklist } from "@/components/app/setup-checklist";
 import { InvoiceStatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 
@@ -24,11 +26,12 @@ export default async function DashboardPage() {
   const currency = clinic.currency;
   const showMoney = can(member, "report:view");
 
-  const [stats, trend, recent, top] = await Promise.all([
+  const [stats, trend, recent, top, setup] = await Promise.all([
     getDashboardStats(clinic.id, clinic.timezone),
     getRevenueTrend(clinic.id, clinic.timezone),
     getRecentInvoices(clinic.id),
     getTopServices(clinic.id, clinic.timezone),
+    getSetupProgress(clinic.id, clinic),
   ]);
 
   const today = new Date().toLocaleDateString("en-GB", {
@@ -54,6 +57,12 @@ export default async function DashboardPage() {
           </Link>
         </Button>
       </header>
+
+      <SetupChecklist
+        progress={setup}
+        canManageClinic={can(member, "clinic:manage")}
+        canManageStaff={can(member, "staff:manage")}
+      />
 
       <section
         aria-label="Today at a glance"

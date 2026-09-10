@@ -2,8 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Printer, Ban, Wallet, Loader2 } from "lucide-react";
+import { Printer, Ban, Wallet, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +41,12 @@ import { formatMoney, minorUnitFactor, parseMoney } from "@/lib/money";
 import { downloadInvoicePdf, sanitizeFilename } from "@/lib/download-invoice-pdf";
 import { recordPayment, voidInvoice } from "../actions";
 
+export interface PrinterChoice {
+  id: string;
+  name: string;
+  paperSize: string;
+}
+
 export function InvoiceActions({
   invoiceId,
   invoiceNumber,
@@ -44,6 +56,7 @@ export function InvoiceActions({
   status,
   canRecordPayment,
   canVoid,
+  printers,
 }: {
   invoiceId: string;
   invoiceNumber: string;
@@ -53,6 +66,8 @@ export function InvoiceActions({
   status: string;
   canRecordPayment: boolean;
   canVoid: boolean;
+  /** Ordered with the clinic's default first. */
+  printers: PrinterChoice[];
 }) {
   const [payOpen, setPayOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
@@ -68,13 +83,13 @@ export function InvoiceActions({
   // name the file. This gets the invoice onto disk, correctly named, in one
   // click; from there the operator can open and print it normally if a
   // physical printer is what they actually wanted.
-  async function handlePrint() {
+  async function handlePrint(paperSize = printers[0]?.paperSize ?? "a4") {
     setDownloading(true);
     try {
       const filename = sanitizeFilename(
         patientName ? `${invoiceNumber} — ${patientName}` : invoiceNumber,
       );
-      await downloadInvoicePdf(filename);
+      await downloadInvoicePdf(filename, paperSize);
       toast.success("Saved to your downloads");
     } catch {
       toast.error("Could not create the PDF. Please try again.");
@@ -126,14 +141,46 @@ export function InvoiceActions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button size="sm" onClick={handlePrint} disabled={downloading}>
-        {downloading ? (
-          <Loader2 className="size-4 animate-spin" aria-hidden />
-        ) : (
-          <Printer className="size-4" aria-hidden />
-        )}
-        {downloading ? "Preparing…" : "Print"}
-      </Button>
+      {printers.length > 1 ? (
+        // More than one printer set up, so ask which — the whole point of
+        // configuring several is choosing between them at this moment.
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" disabled={downloading}>
+              {downloading ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <Printer className="size-4" aria-hidden />
+              )}
+              {downloading ? "Preparing…" : "Print"}
+              <ChevronDown className="size-3.5 opacity-70" aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {printers.map((printer) => (
+              <DropdownMenuItem
+                key={printer.id}
+                onSelect={() => void handlePrint(printer.paperSize)}
+              >
+                {printer.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <Button
+          size="sm"
+          onClick={() => void handlePrint()}
+          disabled={downloading}
+        >
+          {downloading ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : (
+            <Printer className="size-4" aria-hidden />
+          )}
+          {downloading ? "Preparing…" : "Print"}
+        </Button>
+      )}
 
       {canRecordPayment && !isVoid && !settled && (
         <Button size="sm" onClick={() => setPayOpen(true)}>
