@@ -1,6 +1,7 @@
 import { requireTenantSession } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { ClinicForm } from "./clinic-form";
+import { LogoUploader } from "./logo-uploader";
 
 // Every render here depends on the signed-in tenant and must never
 // be cached or shared across requests.
@@ -19,5 +20,10 @@ export default async function ClinicSettingsPage() {
     );
   }
 
-  return <ClinicForm clinic={clinic} />;
+  return (
+    <div className="flex flex-col gap-6">
+      <LogoUploader logoUrl={clinic.logoUrl} />
+      <ClinicForm clinic={clinic} />
+    </div>
+  );
 }

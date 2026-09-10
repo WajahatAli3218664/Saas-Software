@@ -219,3 +219,56 @@ export async function getAuditTrail(limit = 50) {
     .orderBy(auditLogs.createdAt)
     .limit(limit);
 }
+
+const logoUrlSchema = z
+  .string()
+  .trim()
+  .url("That does not look like a web address")
+  .max(500)
+  .refine((url) => url.startsWith("https://"), {
+    message: "The link has to start with https://",
+  });
+
+/**
+ * Sets the logo from a URL the user pastes, for clinics whose deployment has
+ * no blob storage configured. Uploading a file goes through
+ * /api/upload/logo instead.
+ */
+export async function setLogoUrl(url: string): Promise<ActionResult> {
+  try {
+    const { clinic } = await requireActivePermission("clinic:manage");
+
+    const parsed = logoUrlSchema.safeParse(url);
+    if (!parsed.success) {
+      return { ok: false, error: parsed.error.issues[0].message };
+    }
+
+    await db
+      .update(clinics)
+      .set({ logoUrl: parsed.data, updatedAt: new Date() })
+      .where(eq(clinics.id, clinic.id));
+
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return toResult(error);
+  }
+}
+
+export async function removeLogo(): Promise<ActionResult> {
+  try {
+    const { clinic } = await requireActivePermission("clinic:manage");
+
+    // The blob itself is left in place: it is a couple of kilobytes, and
+    // deleting it would break any invoice PDF already saved against it.
+    await db
+      .update(clinics)
+      .set({ logoUrl: null, updatedAt: new Date() })
+      .where(eq(clinics.id, clinic.id));
+
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return toResult(error);
+  }
+}
