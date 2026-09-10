@@ -2,49 +2,30 @@
 
 import { useEffect, useRef } from "react";
 import { useReducedMotion } from "framer-motion";
-import { resolveCssColor, resolveCssFontFamily } from "@/lib/resolve-css-theme";
+import { resolveCssColor } from "@/lib/resolve-css-theme";
 
 /**
- * The Platform section's proof, the way the hero proves billing: three
- * clinics — the platform's own real seeded demo clinics, not invented
- * numbers — floating apart from a single starting point. One piece of
- * software, three separate accounts that never see each other's row.
+ * Three of the things an aesthetic clinic actually keeps on the trolley —
+ * a syringe, a dropper bottle of serum, a jar — modelled from primitives
+ * and floating in WebGL. Not documents, not cards: the section's copy
+ * already carries the words, so the visual gets to be the objects
+ * themselves.
  *
- * Deliberately calmer than the hero: no shadow, no single dominant object,
- * three small things drifting independently — this section is making a
- * "many, separate, airy" point rather than the hero's "one document, real
- * weight" point, and the motion should read that difference at a glance.
+ * Each item is a small group of cylinders, cones and spheres rather than a
+ * loaded model file: it keeps the whole scene at a few hundred triangles
+ * and needs no asset pipeline, which matters for something decorative
+ * sitting halfway down a marketing page.
  */
-const CLINICS = [
-  {
-    name: "Glow Aesthetic Clinic",
-    city: "Lahore",
-    stat: "26 invoices this month",
-    services: ["Dermal Filler — Cheeks", "Botox — Forehead", "HydraFacial"],
-  },
-  {
-    name: "Radiance Skin & Laser",
-    city: "Karachi",
-    stat: "15 invoices this month",
-    services: [
-      "Laser Hair Removal — Full Body",
-      "Dermal Filler — Cheeks",
-      "Botox — Forehead",
-    ],
-  },
-  {
-    name: "Serene Aesthetics",
-    city: "Islamabad",
-    stat: "Just signed up",
-    services: [],
-  },
-];
 
 const LAYOUT = [
-  { x: -1.75, y: 0.16, z: 0.1, rotY: -0.22, rotZ: 0.03 },
-  { x: 0, y: -0.12, z: 0.28, rotY: 0.03, rotZ: -0.015 },
-  { x: 1.75, y: 0.1, z: -0.05, rotY: 0.24, rotZ: -0.03 },
+  { x: -1.85, y: 0.12, rotZ: -0.18, phase: 0 },
+  { x: 0, y: -0.14, rotZ: 0.05, phase: 2.1 },
+  { x: 1.85, y: 0.18, rotZ: 0.2, phase: 4.2 },
 ];
+
+/** The app's own service-category colours: Injectables, Skin Treatments,
+ *  Laser & Devices — the same three used on the Services screen. */
+const ACCENTS = [0x0d9488, 0x6366f1, 0xd97706];
 
 export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -59,12 +40,8 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
 
     (async () => {
       let THREE: typeof import("three");
-      let RoundedBoxGeometry: typeof import("three/addons/geometries/RoundedBoxGeometry.js").RoundedBoxGeometry;
       try {
-        [THREE, { RoundedBoxGeometry }] = await Promise.all([
-          import("three"),
-          import("three/addons/geometries/RoundedBoxGeometry.js"),
-        ]);
+        THREE = await import("three");
       } catch {
         onUnsupported?.();
         return;
@@ -84,385 +61,153 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         return;
       }
 
-      const palette = () => ({
-        card: resolveCssColor("--card"),
-        border: resolveCssColor("--border"),
-        muted: resolveCssColor("--muted"),
-        primary: resolveCssColor("--primary"),
-        foreground: resolveCssColor("--foreground"),
-        mutedForeground: resolveCssColor("--muted-foreground"),
-      });
-
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
-      camera.position.set(0, 0, 7.2);
+      camera.position.set(0, 0, 7.8);
 
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       container.appendChild(renderer.domElement);
 
-      const ambient = new THREE.AmbientLight(0xffffff, 0.7);
-      const key = new THREE.DirectionalLight(0xffffff, 1);
-      key.position.set(2.5, 3, 4);
-      const rim = new THREE.DirectionalLight(0x2dd4bf, 0.5);
-      rim.position.set(-3, -1.5, -2);
-      scene.add(ambient, key, rim);
+      // Lit from the front-right with a teal rim behind, so the metal and
+      // glass have something to catch.
+      const ambient = new THREE.AmbientLight(0xffffff, 0.75);
+      const key = new THREE.DirectionalLight(0xffffff, 1.35);
+      key.position.set(3, 4, 5);
+      const fill = new THREE.DirectionalLight(0xffffff, 0.4);
+      fill.position.set(-4, 1, 3);
+      const rim = new THREE.DirectionalLight(0x2dd4bf, 0.75);
+      rim.position.set(-2.5, -1.5, -3);
+      scene.add(ambient, key, fill, rim);
 
-      const CARD_W = 1.55;
-      const CARD_H = 1.95;
-      const CARD_D = 0.07;
-      const TEX_W = 480;
-      const TEX_H = 604;
+      // Glass reads as the page's own foreground tint so it stays visible
+      // on either theme rather than washing out on white.
+      const glassTint = new THREE.Color(resolveCssColor("--muted-foreground"));
 
-      const bodyMaterial = new THREE.MeshStandardMaterial({
-        roughness: 0.55,
-        metalness: 0.04,
-      });
-
-      type CardMesh = {
-        group: InstanceType<typeof THREE.Group>;
-        canvas: HTMLCanvasElement;
-        ctx: CanvasRenderingContext2D;
-        texture: InstanceType<typeof THREE.CanvasTexture>;
-        phase: number;
-      };
-      const cards: CardMesh[] = [];
-
-      function roundRect(
-        ctx: CanvasRenderingContext2D,
-        x: number,
-        y: number,
-        w: number,
-        h: number,
-        r: number,
-      ) {
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.arcTo(x + w, y, x + w, y + h, r);
-        ctx.arcTo(x + w, y + h, x, y + h, r);
-        ctx.arcTo(x, y + h, x, y, r);
-        ctx.arcTo(x, y, x + w, y, r);
-        ctx.closePath();
-      }
-
-      type ServiceCategory = "inject" | "laser" | "facial" | "flask";
-
-      /** Matches the same keyword logic the DOM fallback uses, so both
-       *  render forms agree on which item a treatment gets. */
-      function categoryFor(service: string): ServiceCategory {
-        const s = service.toLowerCase();
-        if (s.includes("botox") || s.includes("filler")) return "inject";
-        if (s.includes("laser")) return "laser";
-        if (s.includes("facial") || s.includes("hydra") || s.includes("peel"))
-          return "facial";
-        return "flask";
-      }
-
-      /** Small hand-drawn pictograms — a syringe, a laser burst, a droplet,
-       *  a flask — standing in for the actual instrument each treatment
-       *  uses, at a size too small for anything more literal to read well. */
-      function drawServiceIcon(
-        ctx: CanvasRenderingContext2D,
-        kind: ServiceCategory,
-        cx: number,
-        cy: number,
-        size: number,
-        color: string,
-      ) {
-        const s = size / 2;
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.fillStyle = color;
-        ctx.strokeStyle = color;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-
-        if (kind === "inject") {
-          ctx.save();
-          ctx.rotate(-Math.PI / 4);
-          roundRect(ctx, -s * 0.9, -s * 0.28, s * 1.1, s * 0.56, s * 0.14);
-          ctx.fill();
-          ctx.lineWidth = size * 0.09;
-          ctx.beginPath();
-          ctx.moveTo(-s * 0.9, 0);
-          ctx.lineTo(-s * 1.3, 0);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(-s * 1.3, -s * 0.2);
-          ctx.lineTo(-s * 1.3, s * 0.2);
-          ctx.stroke();
-          ctx.lineWidth = size * 0.045;
-          ctx.beginPath();
-          ctx.moveTo(s * 0.2, 0);
-          ctx.lineTo(s * 1.05, 0);
-          ctx.stroke();
-          ctx.restore();
-        } else if (kind === "laser") {
-          ctx.lineWidth = size * 0.13;
-          for (let i = 0; i < 4; i++) {
-            const angle = (Math.PI / 2) * i + Math.PI / 4;
-            ctx.beginPath();
-            ctx.moveTo(Math.cos(angle) * s * 0.28, Math.sin(angle) * s * 0.28);
-            ctx.lineTo(Math.cos(angle) * s * 0.95, Math.sin(angle) * s * 0.95);
-            ctx.stroke();
-          }
-          ctx.beginPath();
-          ctx.arc(0, 0, s * 0.22, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (kind === "facial") {
-          ctx.beginPath();
-          ctx.moveTo(0, -s * 0.95);
-          ctx.quadraticCurveTo(s * 0.85, s * 0.15, 0, s * 0.9);
-          ctx.quadraticCurveTo(-s * 0.85, s * 0.15, 0, -s * 0.95);
-          ctx.closePath();
-          ctx.fill();
-        } else {
-          ctx.beginPath();
-          ctx.moveTo(-s * 0.22, -s * 0.9);
-          ctx.lineTo(s * 0.22, -s * 0.9);
-          ctx.lineTo(s * 0.22, -s * 0.15);
-          ctx.lineTo(s * 0.85, s * 0.85);
-          ctx.lineTo(-s * 0.85, s * 0.85);
-          ctx.lineTo(-s * 0.22, -s * 0.15);
-          ctx.closePath();
-          ctx.fill();
-          ctx.lineWidth = size * 0.12;
-          ctx.beginPath();
-          ctx.moveTo(-s * 0.3, -s * 0.9);
-          ctx.lineTo(s * 0.3, -s * 0.9);
-          ctx.stroke();
-        }
-
-        ctx.restore();
-      }
-
-      // The app's own service-category colours (see tenant.ts's starter
-      // catalogue: Injectables, Skin Treatments, Laser & Devices) — cycled
-      // by position rather than mapped strictly to category, so three
-      // tiles never repeat the same colour even when two treatments are
-      // both injectables.
-      const TILE_COLORS = ["#0d9488", "#6366f1", "#d97706"];
-
-      function shiftLightness(hex: string, amount: number): string {
-        const num = parseInt(hex.slice(1), 16);
-        const clamp = (v: number) => Math.min(255, Math.max(0, v));
-        const r = clamp(((num >> 16) & 0xff) + amount);
-        const g = clamp(((num >> 8) & 0xff) + amount);
-        const b = clamp((num & 0xff) + amount);
-        return `rgb(${r}, ${g}, ${b})`;
-      }
-
-      /** A shaded, gradient-filled tile with a soft drop shadow — reads as
-       *  a small physical item rather than a flat icon on a flat chip. */
-      function drawServiceTile(
-        ctx: CanvasRenderingContext2D,
-        kind: ServiceCategory,
-        color: string,
-        x: number,
-        y: number,
-        size: number,
-      ) {
-        ctx.save();
-        ctx.shadowColor = "rgba(0, 0, 0, 0.28)";
-        ctx.shadowBlur = 16;
-        ctx.shadowOffsetY = 6;
-
-        const gradient = ctx.createLinearGradient(x, y, x, y + size);
-        gradient.addColorStop(0, shiftLightness(color, 22));
-        gradient.addColorStop(1, color);
-        ctx.fillStyle = gradient;
-        roundRect(ctx, x, y, size, size, size * 0.28);
-        ctx.fill();
-        ctx.restore();
-
-        // A faint inner highlight along the top edge, like a bevel.
-        ctx.save();
-        ctx.globalAlpha = 0.18;
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 2;
-        roundRect(
-          ctx,
-          x + 2,
-          y + 2,
-          size - 4,
-          size - 4,
-          size * 0.26,
-        );
-        ctx.stroke();
-        ctx.restore();
-
-        drawServiceIcon(ctx, kind, x + size / 2, y + size / 2, size * 0.46, "#ffffff");
-      }
-
-      function drawCard(card: CardMesh, clinic: (typeof CLINICS)[number]) {
-        const c = palette();
-        const displayFont = resolveCssFontFamily("--font-display", "Georgia, serif");
-        const monoFont = resolveCssFontFamily(
-          "--font-geist-mono",
-          "ui-monospace, monospace",
-        );
-        const sansFont = resolveCssFontFamily("--font-sans", "system-ui, sans-serif");
-
-        const ctx = card.ctx;
-        ctx.clearRect(0, 0, TEX_W, TEX_H);
-        ctx.fillStyle = c.card;
-        roundRect(ctx, 0, 0, TEX_W, TEX_H, 20);
-        ctx.fill();
-
-        // Small accent dot, like a status marker.
-        ctx.fillStyle = c.primary;
-        ctx.beginPath();
-        ctx.arc(44, 52, 7, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = c.mutedForeground;
-        ctx.font = `600 16px ${monoFont}`;
-        ctx.textAlign = "left";
-        ctx.fillText(clinic.city.toUpperCase(), 62, 58);
-
-        ctx.fillStyle = c.foreground;
-        ctx.font = `700 30px ${displayFont}`;
-        wrapText(ctx, clinic.name, 40, 130, TEX_W - 80, 36);
-
-        // Each clinic's own catalogue, as a small cluster of coloured tiles
-        // rather than a list of names — the colours are the platform's own
-        // real service-category colours (Injectables, Skin Treatments,
-        // Laser & Devices), so this isn't an invented marketing palette.
-        // Deliberately not text: a line of names next to icons still reads
-        // as a receipt; a row of solid, shaded tiles reads as items.
-        const tileArea = { top: 214, height: 200 };
-
-        if (clinic.services.length === 0) {
-          const size = 88;
-          const x = TEX_W / 2 - size / 2;
-          const y = tileArea.top + (tileArea.height - size) / 2;
-          ctx.strokeStyle = c.mutedForeground;
-          ctx.globalAlpha = 0.45;
-          ctx.setLineDash([5, 7]);
-          ctx.lineWidth = 2.5;
-          roundRect(ctx, x, y, size, size, size * 0.26);
-          ctx.stroke();
-          ctx.setLineDash([]);
-          ctx.globalAlpha = 1;
-
-          ctx.fillStyle = c.mutedForeground;
-          ctx.font = `500 17px ${sansFont}`;
-          ctx.textAlign = "center";
-          ctx.fillText(
-            "Price list starts empty",
-            TEX_W / 2,
-            tileArea.top + tileArea.height + 30,
-          );
-          ctx.textAlign = "left";
-        } else {
-          const tileSize = 88;
-          const gap = 22;
-          const count = clinic.services.length;
-          const rowWidth = count * tileSize + (count - 1) * gap;
-          let x = TEX_W / 2 - rowWidth / 2;
-          const y = tileArea.top + (tileArea.height - tileSize) / 2;
-
-          clinic.services.forEach((service, i) => {
-            drawServiceTile(
-              ctx,
-              categoryFor(service),
-              TILE_COLORS[i % TILE_COLORS.length],
-              x,
-              y,
-              tileSize,
-            );
-            x += tileSize + gap;
-          });
-
-          ctx.fillStyle = c.mutedForeground;
-          ctx.font = `500 17px ${monoFont}`;
-          ctx.textAlign = "center";
-          ctx.fillText(
-            `${count} treatments on the price list`,
-            TEX_W / 2,
-            tileArea.top + tileArea.height + 30,
-          );
-          ctx.textAlign = "left";
-        }
-
-        ctx.strokeStyle = c.border;
-        ctx.lineWidth = 2;
-        ctx.setLineDash([5, 7]);
-        ctx.beginPath();
-        ctx.moveTo(40, TEX_H - 100);
-        ctx.lineTo(TEX_W - 40, TEX_H - 100);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        ctx.fillStyle = c.primary;
-        ctx.font = `600 22px ${sansFont}`;
-        ctx.fillText(clinic.stat, 40, TEX_H - 56);
-
-        card.texture.needsUpdate = true;
-      }
-
-      function wrapText(
-        ctx: CanvasRenderingContext2D,
-        text: string,
-        x: number,
-        y: number,
-        maxWidth: number,
-        lineHeight: number,
-      ) {
-        const words = text.split(" ");
-        let line = "";
-        let cy = y;
-        for (const word of words) {
-          const test = line ? `${line} ${word}` : word;
-          if (ctx.measureText(test).width > maxWidth && line) {
-            ctx.fillText(line, x, cy);
-            line = word;
-            cy += lineHeight;
-          } else {
-            line = test;
-          }
-        }
-        ctx.fillText(line, x, cy);
-      }
-
-      CLINICS.forEach((clinic, i) => {
-        const group = new THREE.Group();
-
-        const body = new THREE.Mesh(
-          new RoundedBoxGeometry(CARD_W, CARD_H, CARD_D, 3, 0.1),
-          bodyMaterial.clone(),
-        );
-        group.add(body);
-
-        const canvas = document.createElement("canvas");
-        canvas.width = TEX_W;
-        canvas.height = TEX_H;
-        const ctx = canvas.getContext("2d")!;
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.colorSpace = THREE.SRGBColorSpace;
-
-        const faceMaterial = new THREE.MeshStandardMaterial({
-          map: texture,
-          roughness: 0.45,
+      const glass = () =>
+        new THREE.MeshStandardMaterial({
+          color: glassTint,
+          roughness: 0.12,
+          metalness: 0.15,
+          transparent: true,
+          opacity: 0.32,
         });
-        const faceW = CARD_W * 0.94;
-        const faceH = faceW * (TEX_H / TEX_W);
-        const face = new THREE.Mesh(
-          new THREE.PlaneGeometry(faceW, faceH),
-          faceMaterial,
+      const metal = () =>
+        new THREE.MeshStandardMaterial({
+          color: 0xdfe4ea,
+          roughness: 0.22,
+          metalness: 0.95,
+        });
+      const plastic = (color: number) =>
+        new THREE.MeshStandardMaterial({
+          color,
+          roughness: 0.35,
+          metalness: 0.08,
+        });
+      const fluid = (color: number) =>
+        new THREE.MeshStandardMaterial({
+          color,
+          roughness: 0.18,
+          metalness: 0.05,
+          transparent: true,
+          opacity: 0.9,
+        });
+
+      // Derived from Mesh's own constructor rather than written out:
+      // BufferGeometry's class default is wider than the one Mesh accepts,
+      // so naming the class directly doesn't typecheck against a concrete
+      // CylinderGeometry.
+      type PartGeometry = NonNullable<ConstructorParameters<typeof THREE.Mesh>[0]>;
+      type PartMaterial = NonNullable<ConstructorParameters<typeof THREE.Mesh>[1]>;
+
+      function addPart(
+        group: InstanceType<typeof THREE.Group>,
+        geometry: PartGeometry,
+        material: PartMaterial,
+        y: number,
+        rotX = 0,
+      ) {
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.y = y;
+        mesh.rotation.x = rotX;
+        group.add(mesh);
+        return mesh;
+      }
+
+      /** A luer-slip syringe: glass barrel, coloured fill, thumb plunger,
+       *  tapered hub and a steel needle. */
+      function buildSyringe(accent: number) {
+        const g = new THREE.Group();
+        addPart(g, new THREE.CylinderGeometry(0.22, 0.22, 1.25, 28), glass(), 0);
+        addPart(
+          g,
+          new THREE.CylinderGeometry(0.185, 0.185, 0.72, 24),
+          fluid(accent),
+          -0.24,
         );
-        face.position.z = CARD_D / 2 + 0.004;
-        group.add(face);
+        // Finger flange and plunger.
+        addPart(g, new THREE.CylinderGeometry(0.35, 0.35, 0.05, 28), metal(), 0.64);
+        addPart(g, new THREE.CylinderGeometry(0.07, 0.07, 0.72, 14), metal(), 0.98);
+        addPart(g, new THREE.CylinderGeometry(0.27, 0.27, 0.07, 24), plastic(accent), 1.36);
+        // Hub, tapering into the needle.
+        addPart(g, new THREE.ConeGeometry(0.22, 0.3, 24), plastic(accent), -0.77, Math.PI);
+        addPart(g, new THREE.CylinderGeometry(0.026, 0.016, 0.66, 10), metal(), -1.24);
+        return g;
+      }
 
-        // Start stacked near the centre, as if one card about to split into
-        // three — the group's own lerp-toward-target unfurls it outward.
-        group.position.set(0, 0, 0.3 - i * 0.02);
-        group.rotation.set(0, 0, 0);
+      /** A serum bottle with a pipette cap — the shape every skincare
+       *  shelf has on it. */
+      function buildDropperBottle(accent: number) {
+        const g = new THREE.Group();
+        addPart(g, new THREE.CylinderGeometry(0.44, 0.44, 1.05, 32), glass(), -0.2);
+        addPart(
+          g,
+          new THREE.CylinderGeometry(0.39, 0.39, 0.72, 28),
+          fluid(accent),
+          -0.34,
+        );
+        // Shoulder tapering into the neck.
+        addPart(g, new THREE.CylinderGeometry(0.19, 0.44, 0.22, 32), glass(), 0.44);
+        addPart(g, new THREE.CylinderGeometry(0.17, 0.17, 0.16, 24), glass(), 0.63);
+        // Collar and rubber bulb.
+        addPart(g, new THREE.CylinderGeometry(0.23, 0.23, 0.34, 28), plastic(accent), 0.86);
+        const bulb = addPart(
+          g,
+          new THREE.SphereGeometry(0.2, 24, 18),
+          plastic(accent),
+          1.2,
+        );
+        bulb.scale.set(1, 1.25, 1);
+        return g;
+      }
 
+      /** A squat cream jar with a metal lid. */
+      function buildJar(accent: number) {
+        const g = new THREE.Group();
+        addPart(g, new THREE.CylinderGeometry(0.52, 0.46, 0.62, 34), glass(), -0.22);
+        addPart(
+          g,
+          new THREE.CylinderGeometry(0.47, 0.42, 0.34, 30),
+          fluid(accent),
+          -0.3,
+        );
+        addPart(g, new THREE.CylinderGeometry(0.56, 0.56, 0.28, 34), plastic(accent), 0.22);
+        const rim = addPart(
+          g,
+          new THREE.TorusGeometry(0.56, 0.028, 10, 44),
+          metal(),
+          0.36,
+        );
+        rim.rotation.x = Math.PI / 2;
+        return g;
+      }
+
+      const builders = [buildSyringe, buildDropperBottle, buildJar];
+      const items = builders.map((build, i) => {
+        const group = build(ACCENTS[i]);
+        group.scale.setScalar(0.2);
         scene.add(group);
-        const cardMesh: CardMesh = { group, canvas, ctx, texture, phase: i * 2.1 };
-        drawCard(cardMesh, clinic);
-        cards.push(cardMesh);
+        return { group, ...LAYOUT[i] };
       });
 
       function resize() {
@@ -481,6 +226,7 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         "(pointer: fine) and (hover: hover)",
       ).matches;
       const pointerTarget = { x: 0, y: 0 };
+      const pointerCurrent = { x: 0, y: 0 };
       function onPointerMove(event: PointerEvent) {
         const rect = container!.getBoundingClientRect();
         pointerTarget.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -489,36 +235,30 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
       if (pointerFine && !reducedMotion) {
         container.addEventListener("pointermove", onPointerMove);
       }
-      const pointerCurrent = { x: 0, y: 0 };
 
       let frame = 0;
       const start = performance.now();
 
       function draw(time: number) {
         const t = (time - start) / 1000;
-        // Eases every card from its stacked start toward its fanned-out
-        // resting spot — a single continuous lerp per frame settles
-        // naturally rather than needing separate easing keyframes.
-        const progress = reducedMotion ? 1 : Math.min(t / 1.1, 1);
+        // Items grow out from the centre and settle into place; a single
+        // eased progress drives position and scale together.
+        const progress = reducedMotion ? 1 : Math.min(t / 1.2, 1);
         const eased = 1 - Math.pow(1 - progress, 3);
 
         pointerCurrent.x += (pointerTarget.x - pointerCurrent.x) * 0.05;
         pointerCurrent.y += (pointerTarget.y - pointerCurrent.y) * 0.05;
 
-        cards.forEach((card, i) => {
-          const target = LAYOUT[i];
-          const idleY = reducedMotion
-            ? 0
-            : Math.sin(t * 0.7 + card.phase) * 0.05;
-          const idleRot = reducedMotion
-            ? 0
-            : Math.sin(t * 0.5 + card.phase) * 0.04;
+        items.forEach((item) => {
+          const bob = reducedMotion ? 0 : Math.sin(t * 0.75 + item.phase) * 0.07;
+          const spin = reducedMotion ? 0 : t * 0.28 + item.phase;
 
-          card.group.position.x = target.x * eased + pointerCurrent.x * 0.15;
-          card.group.position.y = target.y * eased + idleY + pointerCurrent.y * -0.08;
-          card.group.position.z = target.z * eased;
-          card.group.rotation.y = target.rotY * eased + idleRot;
-          card.group.rotation.z = target.rotZ * eased;
+          item.group.position.x = item.x * eased + pointerCurrent.x * 0.2;
+          item.group.position.y =
+            item.y * eased + bob + pointerCurrent.y * -0.1;
+          item.group.rotation.y = spin;
+          item.group.rotation.z = item.rotZ * eased;
+          item.group.scale.setScalar(0.2 + 0.8 * eased);
         });
 
         renderer.render(scene, camera);
@@ -526,25 +266,15 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
       }
       frame = requestAnimationFrame(draw);
 
+      // Only the glass tint follows the theme; the items keep their own
+      // colours, the way a real object would.
       function applyPalette() {
-        const c = palette();
-        cards.forEach((card, i) => {
-          const body = card.group.children[0] as InstanceType<typeof THREE.Mesh>;
-          const material = body.material as InstanceType<
-            typeof THREE.MeshStandardMaterial
-          >;
-          material.color.set(c.card);
-          drawCard(card, CLINICS[i]);
-        });
+        glassTint.set(resolveCssColor("--muted-foreground"));
       }
       const themeObserver = new MutationObserver(applyPalette);
       themeObserver.observe(document.documentElement, {
         attributes: true,
         attributeFilter: ["class", "data-theme"],
-      });
-
-      document.fonts?.ready?.then(() => {
-        if (!disposed) cards.forEach((card, i) => drawCard(card, CLINICS[i]));
       });
 
       cleanup = () => {
@@ -562,7 +292,6 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
             (material as { dispose?: () => void }).dispose?.();
           }
         });
-        cards.forEach((card) => card.texture.dispose());
         renderer.dispose();
         container!.removeChild(renderer.domElement);
       };

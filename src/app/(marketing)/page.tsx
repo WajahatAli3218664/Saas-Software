@@ -326,7 +326,7 @@ export default async function LandingPage() {
                 Built for aesthetic and cosmetic care
               </span>
               <h2 className="font-display max-w-2xl text-3xl font-semibold tracking-tight text-balance">
-                Injectables to body contouring — it&apos;s all in the price
+                Injectables to body contouring. It&apos;s all in the price
                 list.
               </h2>
               <p className="text-muted-foreground max-w-lg">
