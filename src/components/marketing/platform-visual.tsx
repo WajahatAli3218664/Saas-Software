@@ -13,9 +13,28 @@ const PlatformScene = dynamic(
 // not worth an import that would pull the whole (code-split) 3D module in
 // just to share a literal.
 const CLINICS = [
-  { name: "Glow Aesthetic Clinic", city: "Lahore", stat: "26 invoices this month" },
-  { name: "Radiance Skin & Laser", city: "Karachi", stat: "15 invoices this month" },
-  { name: "Serene Aesthetics", city: "Islamabad", stat: "Just signed up" },
+  {
+    name: "Glow Aesthetic Clinic",
+    city: "Lahore",
+    stat: "26 invoices this month",
+    services: ["Dermal Filler — Cheeks", "Botox — Forehead", "HydraFacial"],
+  },
+  {
+    name: "Radiance Skin & Laser",
+    city: "Karachi",
+    stat: "15 invoices this month",
+    services: [
+      "Laser Hair Removal — Full Body",
+      "Dermal Filler — Cheeks",
+      "Botox — Forehead",
+    ],
+  },
+  {
+    name: "Serene Aesthetics",
+    city: "Islamabad",
+    stat: "Just signed up",
+    services: [],
+  },
 ];
 
 function PlatformFallback() {
@@ -24,7 +43,7 @@ function PlatformFallback() {
       {CLINICS.map((clinic) => (
         <div
           key={clinic.name}
-          className="bg-card flex flex-col gap-2 rounded-xl border p-4"
+          className="bg-card flex flex-col gap-2.5 rounded-xl border p-4"
         >
           <span className="bg-primary/10 text-primary grid size-7 place-items-center rounded-md">
             <Building2 className="size-3.5" aria-hidden />
@@ -37,7 +56,25 @@ function PlatformFallback() {
               {clinic.name}
             </p>
           </div>
-          <p className="text-primary mt-auto text-xs font-medium">
+
+          {clinic.services.length > 0 ? (
+            <ul className="flex flex-col gap-1.5">
+              {clinic.services.map((service) => (
+                <li
+                  key={service}
+                  className="bg-muted truncate rounded-full px-2.5 py-1 text-xs"
+                >
+                  {service}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground border-muted-foreground/40 rounded-full border border-dashed px-2.5 py-1 text-center text-xs">
+              Price list starts empty
+            </p>
+          )}
+
+          <p className="text-primary mt-auto pt-1 text-xs font-medium">
             {clinic.stat}
           </p>
         </div>

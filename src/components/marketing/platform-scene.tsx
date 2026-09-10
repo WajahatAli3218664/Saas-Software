@@ -16,9 +16,28 @@ import { resolveCssColor, resolveCssFontFamily } from "@/lib/resolve-css-theme";
  * weight" point, and the motion should read that difference at a glance.
  */
 const CLINICS = [
-  { name: "Glow Aesthetic Clinic", city: "Lahore", stat: "26 invoices this month" },
-  { name: "Radiance Skin & Laser", city: "Karachi", stat: "15 invoices this month" },
-  { name: "Serene Aesthetics", city: "Islamabad", stat: "Just signed up" },
+  {
+    name: "Glow Aesthetic Clinic",
+    city: "Lahore",
+    stat: "26 invoices this month",
+    services: ["Dermal Filler — Cheeks", "Botox — Forehead", "HydraFacial"],
+  },
+  {
+    name: "Radiance Skin & Laser",
+    city: "Karachi",
+    stat: "15 invoices this month",
+    services: [
+      "Laser Hair Removal — Full Body",
+      "Dermal Filler — Cheeks",
+      "Botox — Forehead",
+    ],
+  },
+  {
+    name: "Serene Aesthetics",
+    city: "Islamabad",
+    stat: "Just signed up",
+    services: [],
+  },
 ];
 
 const LAYOUT = [
@@ -68,6 +87,7 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
       const palette = () => ({
         card: resolveCssColor("--card"),
         border: resolveCssColor("--border"),
+        muted: resolveCssColor("--muted"),
         primary: resolveCssColor("--primary"),
         foreground: resolveCssColor("--foreground"),
         mutedForeground: resolveCssColor("--muted-foreground"),
@@ -154,6 +174,65 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         ctx.fillStyle = c.foreground;
         ctx.font = `700 30px ${displayFont}`;
         wrapText(ctx, clinic.name, 40, 130, TEX_W - 80, 36);
+
+        // Each clinic's own catalogue, as small pills — concrete proof of
+        // "every clinic gets its own price list" rather than a shared menu,
+        // and what actually fills the card rather than leaving it empty.
+        const pillHeight = 42;
+        const pillGap = 14;
+        const pillPadX = 18;
+        const maxPillWidth = TEX_W - 80;
+        let pillY = 210;
+
+        if (clinic.services.length === 0) {
+          ctx.strokeStyle = c.mutedForeground;
+          ctx.globalAlpha = 0.5;
+          ctx.setLineDash([4, 6]);
+          ctx.lineWidth = 2;
+          roundRect(ctx, 40, pillY, maxPillWidth, pillHeight, pillHeight / 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.globalAlpha = 1;
+
+          ctx.fillStyle = c.mutedForeground;
+          ctx.font = `500 18px ${sansFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(
+            "Price list starts empty",
+            40 + maxPillWidth / 2,
+            pillY + pillHeight / 2 + 1,
+          );
+          ctx.textAlign = "left";
+          ctx.textBaseline = "alphabetic";
+        } else {
+          for (const service of clinic.services) {
+            ctx.font = `500 19px ${sansFont}`;
+            let label = service;
+            while (
+              ctx.measureText(label).width > maxPillWidth - pillPadX * 2 &&
+              label.length > 3
+            ) {
+              label = label.slice(0, -1);
+            }
+            if (label !== service) label = `${label.trimEnd()}…`;
+            const pillWidth = Math.min(
+              ctx.measureText(label).width + pillPadX * 2,
+              maxPillWidth,
+            );
+
+            ctx.fillStyle = c.muted;
+            roundRect(ctx, 40, pillY, pillWidth, pillHeight, pillHeight / 2);
+            ctx.fill();
+
+            ctx.fillStyle = c.foreground;
+            ctx.textBaseline = "middle";
+            ctx.fillText(label, 40 + pillPadX, pillY + pillHeight / 2 + 1);
+            ctx.textBaseline = "alphabetic";
+
+            pillY += pillHeight + pillGap;
+          }
+        }
 
         ctx.strokeStyle = c.border;
         ctx.lineWidth = 2;
