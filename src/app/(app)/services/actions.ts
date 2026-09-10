@@ -223,6 +223,42 @@ export async function toggleService(
   }
 }
 
+export async function deleteService(serviceId: string): Promise<ActionResult> {
+  try {
+    const { clinic, member } = await requireActivePermission("service:delete");
+
+    const [existing] = await db
+      .select({ name: services.name })
+      .from(services)
+      .where(
+        and(eq(services.id, serviceId), eq(services.clinicId, clinic.id)),
+      )
+      .limit(1);
+
+    if (!existing) return { ok: false, error: "That service no longer exists." };
+
+    // Invoice lines and appointment services snapshot the name and price at
+    // the moment of sale (service_id there is ON DELETE SET NULL), so past
+    // records stay intact — deleting the catalogue entry only removes it
+    // from what staff can add to a new invoice.
+    await db.delete(services).where(eq(services.id, serviceId));
+
+    await db.insert(auditLogs).values({
+      clinicId: clinic.id,
+      memberId: member.id,
+      action: "service.deleted",
+      entityType: "service",
+      entityId: serviceId,
+      metadata: { name: existing.name },
+    });
+
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return toResult(error);
+  }
+}
+
 const categorySchema = z.object({
   name: z.string().trim().min(1, "Give the category a name").max(80),
   colorHex: z
