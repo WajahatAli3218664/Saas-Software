@@ -17,12 +17,16 @@ import { useReducedMotion } from "framer-motion";
  *
  * All of that is stepped down on small or low-core devices, where the
  * transmission pass and shadow map cost more than they return.
+ *
+ * Tapping or clicking an object gives it a spin-and-lift; the whole point
+ * is that it should feel like something you can pick up, which is also why
+ * pointer taps work on touch devices where the hover parallax does not.
  */
 
 const LAYOUT = [
-  { x: -1.72, y: -0.04, z: -0.5, tilt: -0.12, scale: 0.84, phase: 0 },
+  { x: -1.72, y: 0.04, z: -0.5, tilt: -0.12, scale: 0.84, phase: 0 },
   { x: 0.06, y: 0.06, z: 0.62, tilt: 0.05, scale: 1.06, phase: 2.3 },
-  { x: 1.68, y: -0.08, z: -0.32, tilt: 0.15, scale: 1.02, phase: 4.4 },
+  { x: 1.68, y: 0.0, z: -0.32, tilt: 0.15, scale: 1.02, phase: 4.4 },
 ];
 
 export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void }) {
@@ -151,7 +155,9 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         new THREE.ShadowMaterial({ opacity: 0.19 }),
       );
       ground.rotation.x = -Math.PI / 2;
-      ground.position.y = -1.42;
+      // Just under the objects' feet. Any lower and the shadows detach and
+      // everything reads as floating.
+      ground.position.y = -1.12;
       ground.receiveShadow = true;
       scene.add(ground);
 
@@ -305,7 +311,9 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
           enamel(TEAL_DEEP),
           -0.92,
         );
-        addPart(g, new THREE.CylinderGeometry(0.021, 0.011, 0.64, 14), chrome(), -1.24);
+        // Kept short deliberately: a scale-length needle drops well below
+        // the other two objects and drags the whole composition down.
+        addPart(g, new THREE.CylinderGeometry(0.022, 0.012, 0.3, 14), chrome(), -1.07);
         return g;
       }
 
@@ -410,7 +418,9 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
       const items = [buildSyringe(), buildSerumBottle(), buildCreamJar()].map(
         (group, i) => {
           scene.add(group);
-          return { group, ...LAYOUT[i] };
+          // `spin` and `pop` decay to 0 on their own; a tap sets them to 1
+          // and the draw loop eases them out.
+          return { group, ...LAYOUT[i], spin: 0, pop: 0 };
         },
       );
 
@@ -440,6 +450,40 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         container.addEventListener("pointermove", onPointerMove);
       }
 
+      /**
+       * Tap-to-spin. Raycasting against each group rather than a flat
+       * screen-space guess, so the object you actually hit is the one that
+       * reacts — and it works on touch, where the hover parallax above
+       * never fires.
+       */
+      const raycaster = new THREE.Raycaster();
+      const ndc = new THREE.Vector2();
+      function onPointerDown(event: PointerEvent) {
+        const rect = container!.getBoundingClientRect();
+        ndc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        ndc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(ndc, camera);
+
+        let best: (typeof items)[number] | undefined;
+        let bestDistance = Infinity;
+        for (const item of items) {
+          const hit = raycaster.intersectObject(item.group, true)[0];
+          if (hit && hit.distance < bestDistance) {
+            bestDistance = hit.distance;
+            best = item;
+          }
+        }
+        if (best) {
+          best.spin = 1;
+          best.pop = 1;
+        }
+      }
+      if (!reducedMotion) {
+        container.addEventListener("pointerdown", onPointerDown);
+        container.style.cursor = "pointer";
+        container.style.touchAction = "manipulation";
+      }
+
       let frame = 0;
       const start = performance.now();
 
@@ -452,19 +496,30 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         pointerCurrent.y += (pointerTarget.y - pointerCurrent.y) * 0.05;
 
         items.forEach((item) => {
+          // Both decay geometrically, which gives the tap a fast attack and
+          // a long tail without tracking a start time per object.
+          item.spin *= 0.972;
+          item.pop *= 0.9;
+
           const bob = reducedMotion ? 0 : Math.sin(t * 0.68 + item.phase) * 0.07;
           // Rocking through a limited arc, not spinning: a full turn keeps
           // swinging the label and the graduations away from the viewer.
           const rock = reducedMotion
             ? 0.3
             : 0.3 + Math.sin(t * 0.4 + item.phase) * 0.4;
+          // A tap adds one full turn on top of the rocking, plus a lift and
+          // a slight swell, so it reads as picked up rather than nudged.
+          const spinTurn = item.spin * Math.PI * 2;
+          const lift = item.pop * 0.3;
+          const swell = 1 + item.pop * 0.07;
 
           item.group.position.x = item.x * eased + pointerCurrent.x * 0.2;
-          item.group.position.y = item.y * eased + bob + pointerCurrent.y * -0.09;
+          item.group.position.y =
+            item.y * eased + bob + lift + pointerCurrent.y * -0.09;
           item.group.position.z = item.z * eased;
-          item.group.rotation.y = rock + pointerCurrent.x * 0.16;
+          item.group.rotation.y = rock + spinTurn + pointerCurrent.x * 0.16;
           item.group.rotation.z = item.tilt * eased;
-          item.group.scale.setScalar(item.scale * (0.3 + 0.7 * eased));
+          item.group.scale.setScalar(item.scale * (0.3 + 0.7 * eased) * swell);
         });
 
         renderer.render(scene, camera);
@@ -476,6 +531,7 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         cancelAnimationFrame(frame);
         resizeObserver.disconnect();
         container!.removeEventListener("pointermove", onPointerMove);
+        container!.removeEventListener("pointerdown", onPointerDown);
         scene.traverse((obj) => {
           const mesh = obj as InstanceType<typeof THREE.Mesh>;
           if (mesh.geometry) mesh.geometry.dispose();
@@ -504,6 +560,8 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
     <div
       ref={containerRef}
       className="aspect-[4/3] w-full max-w-xl"
+      // Decorative: the section's own copy already names these items, and
+      // the tap is a flourish, not a control that does anything.
       aria-hidden
     />
   );
