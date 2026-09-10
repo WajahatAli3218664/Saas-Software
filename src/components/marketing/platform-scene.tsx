@@ -5,21 +5,24 @@ import { useReducedMotion } from "framer-motion";
 
 /**
  * Three of the things an aesthetic clinic actually keeps on the trolley —
- * a syringe, a serum bottle, a cream jar — modelled from primitives and
- * lit in WebGL. Not documents, not cards: the section's copy carries the
- * words, so the visual gets to be the objects themselves.
+ * a syringe, a serum bottle, a cream jar — modelled from lathed profiles
+ * and lit like a product shot.
  *
- * The look comes from three decisions rather than detailed geometry:
- * an image-based environment so chrome and glass have something to
- * reflect, filmic tone mapping so the highlights roll off instead of
- * clipping, and lathed silhouettes so the bottle and jar have the
- * curved shoulders that stacked cylinders can't give them.
+ * What does the work here isn't polygon count, it's the render setup:
+ * refractive glass (transmission, not opacity), a hand-built studio
+ * environment so reflections are controlled and on-brand rather than
+ * whatever a generic room map happens to contain, a real shadow map on a
+ * ground plane the camera is tilted just enough to see, and a staggered
+ * composition so the trio has depth instead of sitting in a flat row.
+ *
+ * All of that is stepped down on small or low-core devices, where the
+ * transmission pass and shadow map cost more than they return.
  */
 
 const LAYOUT = [
-  { x: -1.9, y: 0.05, tilt: -0.14, scale: 0.86, phase: 0 },
-  { x: 0, y: -0.05, tilt: 0.07, scale: 1, phase: 2.3 },
-  { x: 1.9, y: 0.1, tilt: 0.16, scale: 1.12, phase: 4.4 },
+  { x: -1.72, y: -0.04, z: -0.5, tilt: -0.12, scale: 0.84, phase: 0 },
+  { x: 0.06, y: 0.06, z: 0.62, tilt: 0.05, scale: 1.06, phase: 2.3 },
+  { x: 1.68, y: -0.08, z: -0.32, tilt: 0.15, scale: 1.02, phase: 4.4 },
 ];
 
 export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void }) {
@@ -35,12 +38,8 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
 
     (async () => {
       let THREE: typeof import("three");
-      let RoomEnvironment: typeof import("three/addons/environments/RoomEnvironment.js").RoomEnvironment;
       try {
-        [THREE, { RoomEnvironment }] = await Promise.all([
-          import("three"),
-          import("three/addons/environments/RoomEnvironment.js"),
-        ]);
+        THREE = await import("three");
       } catch {
         onUnsupported?.();
         return;
@@ -60,74 +59,162 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         return;
       }
 
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      // Refraction and shadow maps are the two expensive things here, and
+      // the two least missed on a phone.
+      const lowPower =
+        window.matchMedia("(max-width: 700px)").matches ||
+        (navigator.hardwareConcurrency ?? 8) <= 4;
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1.5 : 2));
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.15;
+      renderer.toneMappingExposure = 1.1;
+      renderer.transmissionResolutionScale = lowPower ? 0.35 : 0.6;
+      if (!lowPower) {
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      }
       container.appendChild(renderer.domElement);
 
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
-      camera.position.set(0, 0, 7.8);
+      const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 40);
+      // Lifted a little so the ground — and therefore the contact shadow —
+      // is visible at all. Straight-on, a floor plane is edge-on and does
+      // nothing.
+      camera.position.set(0, 0.85, 6.9);
+      camera.lookAt(0, -0.12, 0);
 
-      // A generated room gives every metal and glass surface something to
-      // reflect. Without it, chrome renders as flat grey and the glass
-      // reads as tinted plastic.
+      /**
+       * A studio in an equirect canvas: gradient from a bright ceiling to a
+       * darker floor, one large softbox for the key highlight and a teal
+       * bounce card on the opposite side. Controlled and on-brand, where a
+       * generic room map throws unpredictable colour onto every highlight.
+       */
+      function buildStudioEnvironment() {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1024;
+        canvas.height = 512;
+        const ctx = canvas.getContext("2d")!;
+
+        const sky = ctx.createLinearGradient(0, 0, 0, 512);
+        sky.addColorStop(0, "#ffffff");
+        sky.addColorStop(0.42, "#e4edf0");
+        sky.addColorStop(0.52, "#aab8bf");
+        sky.addColorStop(1, "#4d585e");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, 1024, 512);
+
+        ctx.filter = "blur(34px)";
+        // Key softbox, upper left of the reflection sphere.
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(90, 30, 300, 170);
+        // Teal bounce opposite it, so the rim light has a colour.
+        ctx.fillStyle = "#7fe8d5";
+        ctx.fillRect(640, 70, 250, 140);
+        // A warm low kick to keep the shadow side from going flat.
+        ctx.fillStyle = "#f6e2c8";
+        ctx.fillRect(380, 330, 260, 120);
+        ctx.filter = "none";
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        return texture;
+      }
+
       const pmrem = new THREE.PMREMGenerator(renderer);
-      const environment = pmrem.fromScene(new RoomEnvironment(), 0.04);
+      const equirect = buildStudioEnvironment();
+      const environment = pmrem.fromEquirectangular(equirect);
       scene.environment = environment.texture;
+      equirect.dispose();
 
-      const key = new THREE.DirectionalLight(0xffffff, 2.1);
-      key.position.set(3, 4.5, 5);
-      const rim = new THREE.DirectionalLight(0x5eead4, 1.1);
-      rim.position.set(-3, -1, -3.5);
+      const key = new THREE.DirectionalLight(0xffffff, 2.4);
+      key.position.set(3.2, 5, 4.5);
+      if (!lowPower) {
+        key.castShadow = true;
+        key.shadow.mapSize.set(1024, 1024);
+        key.shadow.camera.near = 1;
+        key.shadow.camera.far = 18;
+        key.shadow.camera.left = -5;
+        key.shadow.camera.right = 5;
+        key.shadow.camera.top = 5;
+        key.shadow.camera.bottom = -5;
+        key.shadow.bias = -0.0016;
+        key.shadow.radius = 5;
+      }
+      const rim = new THREE.DirectionalLight(0x5eead4, 1.2);
+      rim.position.set(-3.5, -0.5, -3);
       scene.add(key, rim);
 
-      // One family of colour, not three competing ones — the page's teal
-      // in three tones, with chrome doing the contrast.
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(40, 40),
+        new THREE.ShadowMaterial({ opacity: 0.19 }),
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = -1.42;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      // The page's teal in two tones, a cream fill, and chrome for
+      // contrast — one family rather than three competing accents.
       const TEAL_BRIGHT = 0x14b8a6;
       const TEAL_DEEP = 0x0f766e;
-      const CREAM = 0xf2e9dd;
+      const CREAM = 0xf4ece0;
 
-      const glass = (tint: number, opacity: number, roughness = 0.06) =>
-        new THREE.MeshPhysicalMaterial({
-          color: tint,
-          roughness,
-          metalness: 0,
-          transparent: true,
-          opacity,
-          clearcoat: 1,
-          clearcoatRoughness: 0.04,
-          envMapIntensity: 1.6,
-        });
+      const glass = (tint: number, thickness = 0.4) =>
+        lowPower
+          ? new THREE.MeshPhysicalMaterial({
+              color: tint,
+              roughness: 0.07,
+              metalness: 0,
+              transparent: true,
+              opacity: 0.42,
+              clearcoat: 1,
+              clearcoatRoughness: 0.04,
+              envMapIntensity: 1.5,
+            })
+          : new THREE.MeshPhysicalMaterial({
+              color: 0xffffff,
+              transmission: 1,
+              thickness,
+              ior: 1.47,
+              roughness: 0.05,
+              metalness: 0,
+              clearcoat: 1,
+              clearcoatRoughness: 0.03,
+              attenuationColor: new THREE.Color(tint),
+              attenuationDistance: 1.1,
+              iridescence: 0.22,
+              iridescenceIOR: 1.32,
+              envMapIntensity: 1.4,
+            });
 
       const chrome = () =>
         new THREE.MeshStandardMaterial({
-          color: 0xeef2f4,
-          roughness: 0.14,
+          color: 0xf1f5f6,
+          roughness: 0.13,
           metalness: 1,
-          envMapIntensity: 1.5,
+          envMapIntensity: 1.6,
         });
 
       const enamel = (color: number) =>
         new THREE.MeshPhysicalMaterial({
           color,
-          roughness: 0.28,
-          metalness: 0.1,
-          clearcoat: 0.9,
-          clearcoatRoughness: 0.12,
+          roughness: 0.26,
+          metalness: 0.08,
+          clearcoat: 1,
+          clearcoatRoughness: 0.1,
           envMapIntensity: 1.2,
         });
 
-      const fluid = (color: number) =>
+      const liquid = (color: number) =>
         new THREE.MeshPhysicalMaterial({
           color,
-          roughness: 0.12,
+          roughness: 0.1,
           metalness: 0,
-          transparent: true,
-          opacity: 0.92,
           clearcoat: 1,
-          envMapIntensity: 1.1,
+          clearcoatRoughness: 0.05,
+          envMapIntensity: 1,
         });
 
       type PartGeometry = NonNullable<ConstructorParameters<typeof THREE.Mesh>[0]>;
@@ -143,13 +230,14 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.y = y;
         mesh.rotation.x = rotX;
+        mesh.castShadow = !lowPower;
         group.add(mesh);
         return mesh;
       }
 
       /** Revolves a 2D silhouette — the only way to get the curved
-       *  shoulder a real bottle has. */
-      function lathe(points: [number, number][], segments = 48) {
+       *  shoulders and rolled lips a moulded object actually has. */
+      function lathe(points: [number, number][], segments = 64) {
         return new THREE.LatheGeometry(
           points.map(([x, y]) => new THREE.Vector2(x, y)),
           segments,
@@ -158,56 +246,66 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
 
       function buildSyringe() {
         const g = new THREE.Group();
-        // Barrel with a rolled lip at the top, drawn as a profile.
         addPart(
           g,
           lathe([
             [0.0, -0.62],
-            [0.21, -0.62],
-            [0.21, 0.6],
-            [0.24, 0.62],
-            [0.34, 0.64],
-            [0.34, 0.69],
-            [0.0, 0.69],
+            [0.205, -0.62],
+            [0.205, 0.58],
+            [0.225, 0.605],
+            [0.33, 0.625],
+            [0.33, 0.675],
+            [0.0, 0.675],
           ]),
-          glass(0xdff1f0, 0.34),
+          glass(0xdff3f1, 0.22),
           0,
         );
         addPart(
           g,
-          new THREE.CylinderGeometry(0.185, 0.185, 0.78, 40),
-          fluid(TEAL_BRIGHT),
-          -0.21,
+          new THREE.CylinderGeometry(0.183, 0.183, 0.78, 48),
+          liquid(TEAL_BRIGHT),
+          -0.2,
         );
-        // Plunger: rod, thumb pad, and the seal you can see through glass.
-        addPart(g, new THREE.CylinderGeometry(0.075, 0.075, 0.8, 20), chrome(), 1.02);
+        // Graduation marks, which is most of what reads as "syringe".
+        [0.06, 0.2, 0.34, 0.48].forEach((offset) => {
+          const ring = addPart(
+            g,
+            new THREE.TorusGeometry(0.207, 0.006, 8, 44),
+            chrome(),
+            offset,
+            Math.PI / 2,
+          );
+          ring.scale.setScalar(1);
+        });
+        addPart(g, new THREE.CylinderGeometry(0.072, 0.072, 0.78, 24), chrome(), 1.0);
         addPart(
           g,
           lathe([
             [0.0, 0.0],
-            [0.28, 0.0],
-            [0.3, 0.02],
-            [0.3, 0.07],
-            [0.0, 0.07],
+            [0.27, 0.0],
+            [0.29, 0.022],
+            [0.29, 0.062],
+            [0.26, 0.08],
+            [0.0, 0.08],
           ]),
           enamel(TEAL_DEEP),
-          1.38,
+          1.35,
         );
-        addPart(g, new THREE.CylinderGeometry(0.19, 0.19, 0.1, 32), enamel(TEAL_DEEP), 0.2);
-        // Hub tapering into a steel needle.
+        addPart(g, new THREE.CylinderGeometry(0.185, 0.185, 0.1, 40), enamel(TEAL_DEEP), 0.19);
         addPart(
           g,
           lathe([
             [0.0, 0.0],
             [0.2, 0.0],
-            [0.1, 0.26],
-            [0.045, 0.3],
+            [0.185, 0.06],
+            [0.09, 0.25],
+            [0.042, 0.3],
             [0.0, 0.3],
           ]),
           enamel(TEAL_DEEP),
           -0.92,
         );
-        addPart(g, new THREE.CylinderGeometry(0.022, 0.012, 0.62, 12), chrome(), -1.23);
+        addPart(g, new THREE.CylinderGeometry(0.021, 0.011, 0.64, 14), chrome(), -1.24);
         return g;
       }
 
@@ -216,41 +314,55 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
         addPart(
           g,
           lathe([
-            [0.0, -0.72],
-            [0.32, -0.72],
-            [0.42, -0.66],
-            [0.44, -0.52],
-            [0.44, 0.2],
-            [0.42, 0.34],
-            [0.3, 0.48],
-            [0.19, 0.56],
-            [0.18, 0.72],
-            [0.0, 0.72],
+            [0.0, -0.7],
+            [0.3, -0.7],
+            [0.41, -0.64],
+            [0.435, -0.5],
+            [0.435, 0.18],
+            [0.415, 0.32],
+            [0.3, 0.47],
+            [0.19, 0.55],
+            [0.18, 0.71],
+            [0.0, 0.71],
           ]),
-          glass(TEAL_DEEP, 0.42, 0.1),
+          glass(TEAL_DEEP, 0.5),
           0,
         );
         addPart(
           g,
-          new THREE.CylinderGeometry(0.38, 0.38, 0.82, 40),
-          fluid(TEAL_BRIGHT),
-          -0.28,
+          new THREE.CylinderGeometry(0.375, 0.375, 0.84, 48),
+          liquid(TEAL_BRIGHT),
+          -0.26,
         );
-        // Collar and pipette bulb.
+        // A wrap-around label — the thing that turns a bottle into a
+        // product rather than a container.
+        addPart(
+          g,
+          new THREE.CylinderGeometry(0.443, 0.443, 0.34, 48, 1, true),
+          enamel(CREAM),
+          -0.12,
+        );
+        addPart(
+          g,
+          new THREE.TorusGeometry(0.444, 0.007, 8, 56),
+          enamel(TEAL_BRIGHT),
+          0.045,
+          Math.PI / 2,
+        );
         addPart(
           g,
           lathe([
             [0.0, 0.0],
-            [0.23, 0.0],
-            [0.23, 0.3],
-            [0.2, 0.34],
-            [0.0, 0.34],
+            [0.225, 0.0],
+            [0.225, 0.26],
+            [0.2, 0.31],
+            [0.0, 0.31],
           ]),
           chrome(),
           0.7,
         );
-        const bulb = addPart(g, new THREE.SphereGeometry(0.19, 32, 24), enamel(TEAL_DEEP), 1.18);
-        bulb.scale.set(1, 1.3, 1);
+        const bulb = addPart(g, new THREE.SphereGeometry(0.185, 40, 28), enamel(TEAL_DEEP), 1.16);
+        bulb.scale.set(1, 1.32, 1);
         return g;
       }
 
@@ -260,33 +372,38 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
           g,
           lathe([
             [0.0, -0.34],
-            [0.4, -0.34],
-            [0.5, -0.26],
-            [0.52, 0.08],
-            [0.5, 0.18],
-            [0.46, 0.2],
-            [0.46, 0.24],
+            [0.39, -0.34],
+            [0.49, -0.25],
+            [0.51, 0.06],
+            [0.49, 0.17],
+            [0.45, 0.2],
+            [0.45, 0.24],
             [0.0, 0.24],
           ]),
-          glass(0xe9f4f2, 0.36),
+          glass(0xeaf5f3, 0.34),
           0,
         );
-        addPart(g, new THREE.CylinderGeometry(0.45, 0.42, 0.4, 40), fluid(CREAM), -0.11);
-        // Weighted metal lid with a bevelled edge.
+        addPart(g, new THREE.CylinderGeometry(0.44, 0.41, 0.42, 48), liquid(CREAM), -0.1);
         addPart(
           g,
           lathe([
             [0.0, 0.0],
-            [0.55, 0.0],
-            [0.56, 0.04],
-            [0.56, 0.22],
-            [0.52, 0.28],
-            [0.0, 0.28],
+            [0.53, 0.0],
+            [0.545, 0.035],
+            [0.545, 0.2],
+            [0.5, 0.27],
+            [0.0, 0.27],
           ]),
           chrome(),
           0.22,
         );
-        addPart(g, new THREE.TorusGeometry(0.556, 0.022, 12, 56), enamel(TEAL_BRIGHT), 0.34, Math.PI / 2);
+        addPart(
+          g,
+          new THREE.TorusGeometry(0.541, 0.019, 12, 64),
+          enamel(TEAL_BRIGHT),
+          0.32,
+          Math.PI / 2,
+        );
         return g;
       }
 
@@ -296,34 +413,6 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
           return { group, ...LAYOUT[i] };
         },
       );
-
-      // A soft haze under each object so it sits in the scene rather than
-      // floating in a void — a camera-facing gradient, since a flat ground
-      // plane would be edge-on to this camera and invisible.
-      const shadowCanvas = document.createElement("canvas");
-      shadowCanvas.width = 128;
-      shadowCanvas.height = 128;
-      const shadowCtx = shadowCanvas.getContext("2d")!;
-      const grad = shadowCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
-      grad.addColorStop(0, "rgba(0,0,0,0.4)");
-      grad.addColorStop(1, "rgba(0,0,0,0)");
-      shadowCtx.fillStyle = grad;
-      shadowCtx.fillRect(0, 0, 128, 128);
-      const shadowTexture = new THREE.CanvasTexture(shadowCanvas);
-      const shadows = items.map((item) => {
-        const mesh = new THREE.Mesh(
-          new THREE.PlaneGeometry(1.9, 0.7),
-          new THREE.MeshBasicMaterial({
-            map: shadowTexture,
-            transparent: true,
-            opacity: 0.5,
-            depthWrite: false,
-          }),
-        );
-        mesh.position.set(item.x, -1.55, -0.4);
-        scene.add(mesh);
-        return mesh;
-      });
 
       function resize() {
         const rect = container!.getBoundingClientRect();
@@ -356,28 +445,26 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
 
       function draw(time: number) {
         const t = (time - start) / 1000;
-        const progress = reducedMotion ? 1 : Math.min(t / 1.2, 1);
+        const progress = reducedMotion ? 1 : Math.min(t / 1.3, 1);
         const eased = 1 - Math.pow(1 - progress, 3);
 
         pointerCurrent.x += (pointerTarget.x - pointerCurrent.x) * 0.05;
         pointerCurrent.y += (pointerTarget.y - pointerCurrent.y) * 0.05;
 
-        items.forEach((item, i) => {
-          const bob = reducedMotion ? 0 : Math.sin(t * 0.7 + item.phase) * 0.075;
-          // Rocking, not spinning: a full turn keeps swinging the good
-          // side away from the viewer.
+        items.forEach((item) => {
+          const bob = reducedMotion ? 0 : Math.sin(t * 0.68 + item.phase) * 0.07;
+          // Rocking through a limited arc, not spinning: a full turn keeps
+          // swinging the label and the graduations away from the viewer.
           const rock = reducedMotion
-            ? 0.35
-            : 0.35 + Math.sin(t * 0.42 + item.phase) * 0.45;
+            ? 0.3
+            : 0.3 + Math.sin(t * 0.4 + item.phase) * 0.4;
 
-          item.group.position.x = item.x * eased + pointerCurrent.x * 0.22;
-          item.group.position.y = item.y * eased + bob + pointerCurrent.y * -0.1;
-          item.group.rotation.y = rock + pointerCurrent.x * 0.18;
+          item.group.position.x = item.x * eased + pointerCurrent.x * 0.2;
+          item.group.position.y = item.y * eased + bob + pointerCurrent.y * -0.09;
+          item.group.position.z = item.z * eased;
+          item.group.rotation.y = rock + pointerCurrent.x * 0.16;
           item.group.rotation.z = item.tilt * eased;
-          item.group.scale.setScalar(item.scale * (0.25 + 0.75 * eased));
-
-          shadows[i].position.x = item.x * eased + pointerCurrent.x * 0.22;
-          shadows[i].material.opacity = 0.5 * eased;
+          item.group.scale.setScalar(item.scale * (0.3 + 0.7 * eased));
         });
 
         renderer.render(scene, camera);
@@ -399,7 +486,6 @@ export function PlatformScene({ onUnsupported }: { onUnsupported?: () => void })
             (material as { dispose?: () => void }).dispose?.();
           }
         });
-        shadowTexture.dispose();
         environment.texture.dispose();
         pmrem.dispose();
         renderer.dispose();
