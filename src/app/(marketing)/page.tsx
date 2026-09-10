@@ -9,6 +9,12 @@ import {
   UserCog,
   Globe,
 } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Reveal, RevealPop } from "@/components/marketing/reveal";
 import { PricingTable } from "@/components/marketing/pricing-table";
 import { Aurora } from "@/components/marketing/aurora";
@@ -70,6 +76,50 @@ const PLATFORM = [
     icon: Globe,
     title: "Nothing to install, nowhere to visit",
     body: "Sign up, name your clinic, upload your logo. You are billing patients two minutes later, from any computer or phone.",
+  },
+];
+
+/** A genuine sequence, first patient to first receipt — the numbering here
+ *  carries real order, not decoration. */
+const STEPS = [
+  {
+    title: "Create your clinic",
+    body: "Your name, your clinic's name, your logo if you have one ready. Your currency is set from where you sign up — no form to fill in.",
+  },
+  {
+    title: "Your price list is already there",
+    body: "Injectables, skin treatments, lasers and consultations, priced and ready. Rename anything, reprice anything, delete what you don't offer.",
+  },
+  {
+    title: "Bill your first patient",
+    body: "Search a treatment, add it, apply a discount if you're allowed one. Print a receipt or save it as a PDF — either way, done.",
+  },
+];
+
+const FAQS = [
+  {
+    q: "Can another clinic on the platform see my patients?",
+    a: "No. Every record — patients, invoices, prices — carries your clinic's identity, and every query is scoped to whoever is signed in. Two clinics on the same platform never share a row of data.",
+  },
+  {
+    q: "What happens if I stop paying?",
+    a: "Nothing already in your account disappears. You can still open past invoices and patient records; you just can't create new ones until you're back on a plan.",
+  },
+  {
+    q: "Do I need a special printer?",
+    a: "No. Printing saves a correctly named file straight to your device using whatever's already set up on the computer — no drivers, no installation.",
+  },
+  {
+    q: "Can more than one person use it at the same time?",
+    a: "Yes. Each staff member signs in with their own login, and you decide individually what each one is allowed to do — add a service, change a price, give a discount, and how much.",
+  },
+  {
+    q: "What if my clinic outgrows its plan?",
+    a: "Switch plans any time from Settings, in a couple of clicks. There's no need to move your data or start over.",
+  },
+  {
+    q: "Do I need a card to try it?",
+    a: "No. Every clinic starts with a 14-day trial at full Professional-tier access, no card required.",
   },
 ];
 
@@ -153,6 +203,42 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* How it works — a real sequence, so the numbering earns its place. */}
+      <section className="border-b">
+        <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
+          <Reveal>
+            <div className="flex max-w-xl flex-col gap-3">
+              <span className="text-primary font-mono text-xs tracking-widest uppercase">
+                First patient to first receipt
+              </span>
+              <h2 className="font-display text-3xl font-semibold tracking-tight text-balance">
+                Three steps. No call, no setup visit.
+              </h2>
+            </div>
+          </Reveal>
+
+          <div className="relative mt-10 grid gap-8 md:grid-cols-3 md:gap-6">
+            <div
+              aria-hidden
+              className="via-border absolute top-6 right-0 left-0 hidden h-px bg-gradient-to-r from-transparent to-transparent md:block"
+            />
+            {STEPS.map((step, i) => (
+              <Reveal key={step.title} delay={i * 0.1}>
+                <div className="relative flex flex-col gap-3">
+                  <span className="bg-background border-primary/30 text-primary font-display relative z-10 grid size-12 place-items-center rounded-full border-2 text-lg font-semibold">
+                    {i + 1}
+                  </span>
+                  <h3 className="font-medium">{step.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {step.body}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section id="features" className="border-b">
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
@@ -195,6 +281,31 @@ export default async function LandingPage() {
           </Reveal>
           <Reveal delay={0.08}>
             <PricingTable region={region} />
+          </Reveal>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="border-b">
+        <div className="mx-auto w-full max-w-2xl px-4 py-20 sm:px-6">
+          <Reveal>
+            <h2 className="font-display mb-8 text-center text-3xl font-semibold tracking-tight text-balance">
+              Questions clinics actually ask
+            </h2>
+          </Reveal>
+          <Reveal delay={0.06}>
+            <Accordion type="single" collapsible className="w-full">
+              {FAQS.map((item) => (
+                <AccordionItem key={item.q} value={item.q}>
+                  <AccordionTrigger className="text-left font-medium">
+                    {item.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    {item.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </Reveal>
         </div>
       </section>

@@ -1,11 +1,22 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InvoicePreview } from "@/components/marketing/invoice-preview";
 import { TypewriterHeadline } from "@/components/marketing/typewriter-headline";
+
+// WebGL only loads for whoever actually sees the hero, and never on the
+// server — three.js has no business in the initial HTML or in any other
+// route's bundle. InvoicePreview (the flat 2D card) doubles as both the
+// loading placeholder and the fallback if WebGL genuinely isn't available.
+const InvoiceScene = dynamic(
+  () => import("./invoice-scene").then((m) => m.InvoiceScene),
+  { ssr: false, loading: () => <InvoicePreview /> },
+);
 
 /**
  * The hero's text and product glimpse, as one client component so the
@@ -15,8 +26,10 @@ import { TypewriterHeadline } from "@/components/marketing/typewriter-headline";
  * Component that owns the page, hence this boundary.
  */
 export function HeroContent() {
+  const [webglOk, setWebglOk] = useState(true);
+
   return (
-    <>
+    <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8">
       <div className="flex max-w-2xl flex-col gap-6">
         <motion.span
           initial={{ opacity: 0, y: -8 }}
@@ -76,15 +89,21 @@ export function HeroContent() {
         </motion.p>
       </div>
 
-      {/* Product glimpse — a real invoice, filling in row by row. */}
+      {/* Product glimpse — a real invoice, floating in 3D and turning to
+          face whoever scrolls in. Falls back to a flat card wherever WebGL
+          isn't available. */}
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 1.75, ease: [0.16, 1, 0.3, 1] }}
-        className="mt-14"
+        transition={{ duration: 0.7, delay: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        className="mx-auto w-full max-w-sm lg:mx-0"
       >
-        <InvoicePreview />
+        {webglOk ? (
+          <InvoiceScene onUnsupported={() => setWebglOk(false)} />
+        ) : (
+          <InvoicePreview />
+        )}
       </motion.div>
-    </>
+    </div>
   );
 }

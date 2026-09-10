@@ -25,6 +25,9 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
             <Link href="/pricing" className="hover:text-foreground">
               Pricing
             </Link>
+            <Link href="/#faq" className="hover:text-foreground">
+              FAQ
+            </Link>
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
